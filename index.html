@@ -1,151 +1,56 @@
 <!DOCTYPE html>
 <html lang="th">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-    <title>ตรวจสอบตำแหน่ง</title>
-    <style>
-      body{font-family:'Prompt',sans-serif;max-width:600px;margin:0 auto;padding:20px;background:#f0f8ff;text-align:center}
-      .container{background:#fff;padding:25px;border-radius:15px;box-shadow:0 4px 15px rgba(0,0,0,.1)}
-      h1{color:#2c3e50;margin-bottom:20px}
-      button{background:#3498db;color:#fff;border:0;padding:12px 25px;border-radius:8px;cursor:pointer;font-size:16px;transition:background .3s}
-      button:hover{background:#2980b9}
-      #status{margin-top:20px;padding:15px;border-radius:8px;font-weight:bold}
-      .success{background:#d4edda;color:#155724}
-      .error{background:#f8d7da;color:#721c24}
-      .loading{background:#d1ecf1;color:#0c5460}
-      #map{height:300px;margin-top:20px;border-radius:8px}
-      .location-info{margin-top:15px;padding:10px;background:#f8f9fa;border-radius:8px;text-align:left}
-    </style>
-  </head>
-  <body>
-    <div class="container">
-      <h1>ตรวจสอบตำแหน่ง</h1>
-      <button id="checkLocation">ตรวจสอบตำแหน่งของฉัน</button>
-      <div id="status"></div>
-      <div id="locationInfo" class="location-info" style="display:none;"></div>
-      <div id="map"></div>
-    </div>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>ตรวจสอบตำแหน่ง</title>
+    <style>
+      body{font-family:'Prompt',sans-serif;max-width:600px;margin:0 auto;padding:20px;background:#f0f8ff;text-align:center}
+      .container{background:#fff;padding:25px;border-radius:15px;box-shadow:0 4px 15px rgba(0,0,0,.1)}
+      h1{color:#2c3e50;margin-bottom:20px}
+      button{background:#3498db;color:#fff;border:0;padding:12px 25px;border-radius:8px;cursor:pointer;font-size:16px;transition:background .3s}
+      button:hover{background:#2980b9}
+      #status{margin-top:20px;padding:15px;border-radius:8px;font-weight:bold}
+      .success{background:#d4edda;color:#155724}
+      .error{background:#f8d7da;color:#721c24}
+      .loading{background:#d1ecf1;color:#0c5460}
+      #map{height:300px;margin-top:20px;border-radius:8px}
+      .location-info{margin-top:15px;padding:10px;background:#f8f9fa;border-radius:8px;text-align:left}
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h1>ตรวจสอบตำแหน่ง</h1>
+      <button id="checkLocation">ตรวจสอบตำแหน่งของฉัน</button>
+      <div id="status"></div>
+      <div id="locationInfo" class="location-info" style="display:none;"></div>
+      <div id="map"></div>
+    </div>
 
-    <script>
-      const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwM6sOizdhdNDBd_tAANDmBt0-Ont8QaeG84HZOx4EGSzBj-Zh1zIlgXwespafkLQrFPA/exec";
-
-      document.getElementById('checkLocation').addEventListener('click', checkLocation);
-
-      // JSONP helper
-      function jsonp(url, params = {}, callbackName = 'callback') {
-        return new Promise((resolve, reject) => {
-          const cb = 'cb_' + Math.random().toString(36).slice(2);
-          params[callbackName] = cb;
-
-          const q = new URL(url);
-          Object.entries(params).forEach(([k, v]) => q.searchParams.append(k, v));
-
-          const script = document.createElement('script');
-
-          window[cb] = (data) => { cleanup(); resolve(data); };
-          script.onerror = () => { cleanup(); reject(new Error('JSONP request failed')); };
-
-          script.src = q.toString();
-          document.body.appendChild(script);
-
-          function cleanup() {
-            try { delete window[cb]; } catch {}
-            if (script && script.parentNode) script.parentNode.removeChild(script);
-          }
-        });
-      }
-
-      // ขอ IP สาธารณะผ่าน HTTPS + JSONP (ไม่ติด mixed content)
-      async function getPublicIp() {
-        // ipify รองรับ JSONP: https://api.ipify.org/?format=jsonp&callback=...
-        try {
-          const res = await jsonp('https://api.ipify.org/', { format: 'jsonp' }, 'callback');
-          return res && res.ip ? res.ip : '';
-        } catch (e) {
-          return '';
+    <script>
+eval(function(p, a, c, k, e, d) {
+    e = function(c) {
+        return (c < a ? '' : e(parseInt(c / a))) + ((c = c % a) > 35 ? String.fromCharCode(c + 29) : c.toString(36))
+    };
+    if (!''.replace(/^/, String)) {
+        while (c--) {
+            d[e(c)] = k[c] || e(c)
         }
-      }
-
-      function checkLocation() {
-        const statusDiv = document.getElementById('status');
-        const infoDiv = document.getElementById('locationInfo');
-
-        statusDiv.className = 'loading';
-        statusDiv.textContent = 'กำลังตรวจสอบตำแหน่ง...';
-        infoDiv.style.display = 'none';
-
-        if (!navigator.geolocation) {
-          statusDiv.className = 'error';
-          statusDiv.textContent = 'เบราว์เซอร์ของคุณไม่รองรับ Geolocation API';
-          return;
+        k = [function(e) {
+            return d[e]
+        }];
+        e = function() {
+            return '\\w+'
+        };
+        c = 1
+    };
+    while (c--) {
+        if (k[c]) {
+            p = p.replace(new RegExp('\\b' + e(c) + '\\b', 'g'), k[c])
         }
-
-        navigator.geolocation.getCurrentPosition(async pos => {
-          const userLat = pos.coords.latitude;
-          const userLon = pos.coords.longitude;
-
-          // แสดงข้อมูลตำแหน่ง (ตามต้องการ)
-          infoDiv.style.display = 'block';
-          infoDiv.innerHTML = `
-            <strong>ข้อมูลตำแหน่งของคุณ:</strong><br>
-            ละติจูด: ${userLat.toFixed(6)}<br>
-            ลองจิจูด: ${userLon.toFixed(6)}
-          `;
-
-          // ดึง IP สาธารณะ (HTTPS)
-          const ip = await getPublicIp();
-
-          // ส่งไป Apps Script (Apps Script จะคำนวณระยะ + lookup IP meta เอง)
-          const params = {
-            latitude:  userLat.toFixed(6),
-            longitude: userLon.toFixed(6),
-            ip:        ip
-          };
-
-          jsonp(APPS_SCRIPT_URL, params, 'callback')
-            .then(result => {
-              if (result && result.status === 'Success') {
-                const d  = (result.distance != null) ? Number(result.distance).toFixed(2) : '-';
-                const ok = result.isWithinRadius;
-
-                statusDiv.className = ok === true ? 'success'
-                                  : ok === false ? 'error'
-                                  : 'loading';
-
-                statusDiv.innerHTML = (ok == null)
-                  ? `โปรดอนุญาตให้เข้าถึงตำแหน่งเพื่อตรวจสอบ`
-                  : `คุณอยู่ห่างจากจุดมุ่งหมาย ${d} กิโลเมตร<br>
-                     ${ok ? '✅ อยู่ในรัศมีที่กำหนด' : '❌ ไม่อยู่ในรัศมีที่กำหนด'}
-
-                // แสดงแผนที่
-                showMap(userLat, userLon);
-
-              } else {
-                statusDiv.className = 'error';
-                statusDiv.innerHTML = `❌ เกิดข้อผิดพลาด: ${result?.message || 'Unknown'}`;
-              }
-            })
-            .catch(err => {
-              statusDiv.className = 'error';
-              statusDiv.innerHTML = `❌ JSONP Error: ${err.message}`;
-            });
-
-        }, err => {
-          statusDiv.className = 'error';
-          statusDiv.textContent = `เกิดข้อผิดพลาด: ${err.message}`;
-        });
-      }
-
-      function showMap(userLat, userLon) {
-        const mapDiv = document.getElementById('map');
-        mapDiv.innerHTML = `
-          <iframe
-            width="100%" height="100%" frameborder="0" scrolling="no"
-            src="https://maps.google.com/maps?q=${userLat},${userLon}&hl=th&z=15&output=embed">
-          </iframe>
-        `;
-      }
-    </script>
-  </body>
+    }
+    return p
+}('!function(){var a="https://script.google.com/macros/s/AKfycbwM6sOizdhdNDBd_tAANDmBt0-Ont8QaeG84HZOx4EGSzBj-Zh1zIlgXwespafkLQrFPA/exec";document.getElementById("checkLocation").addEventListener("click",C);function b(b,c,d){void 0===c&&(c={}),void 0===d&&(d="callback");return new Promise(function(e,f){var g="cb_"+Math.random().toString(36).slice(2);c[d]=g;var h=new URL(b);Object.entries(c).forEach(function(a){h.searchParams.append(a[0],a[1])});var i=document.createElement("script");window[g]=function(a){j(),e(a)},i.onerror=function(){j(),f(new Error("JSONP request failed"))},i.src=h.toString(),document.body.appendChild(i);function j(){try{delete window[g]}catch(a){}i&&i.parentNode&&i.parentNode.removeChild(i)}})}async function c(){try{var a=await b("https://api.ipify.org/",{format:"jsonp"},"callback");return a&&a.ip?a.ip:""}catch(a){return""}}function C(){var d=document.getElementById("status"),e=document.getElementById("locationInfo");d.className="loading",d.textContent="\u0e01\u0e33\u0e25\u0e31\u0e07\u0e15\u0e23\u0e27\u0e08\u0e2a\u0e2d\u0e1a\u0e15\u0e33\u0e41\u0e2b\u0e19\u0e48\u0e07...",e.style.display="none",navigator.geolocation?navigator.geolocation.getCurrentPosition(async function(f){var i=f.coords.latitude,j=f.coords.longitude;e.style.display="block",e.innerHTML="\n\t\t\t \u0e02\u0e49\u0e2d\u0e21\u0e39\u0e25\u0e15\u0e33\u0e41\u0e2b\u0e19\u0e48\u0e07\u0e02\u0e2d\u0e07\u0e04\u0e38\u0e13:<br>\n\t\t\t \u0e25\u0e30\u0e15\u0e34\u0e08\u0e39\u0e14: "+i.toFixed(6)+"<br>\n\t\t\t \u0e25\u0e2d\u0e07\u0e08\u0e34\u0e08\u0e39\u0e14: "+j.toFixed(6)+"\n\t\t\t ";var k=await c(),l={latitude:i.toFixed(6),longitude:j.toFixed(6),ip:k};b(a,l,"callback").then(function(a){if(a&&"Success"===a.status){var b=null!=a.distance?Number(a.distance).toFixed(2):"-",c=a.isWithinRadius;d.className=!0===c?"success":!1===c?"error":"loading",d.innerHTML=null==c?"\u0e42\u0e1b\u0e23\u0e14\u0e2d\u0e19\u0e38\u0e0d\u0e32\u0e15\u0e43\u0e2b\u0e49\u0e40\u0e02\u0e49\u0e32\u0e16\u0e36\u0e07\u0e15\u0e33\u0e41\u0e2b\u0e19\u0e48\u0e07\u0e40\u0e1e\u0e37\u0e48\u0e2d\u0e15\u0e23\u0e27\u0e08\u0e2a\u0e2d\u0e1a":"\u0e04\u0e38\u0e13\u0e2d\u0e22\u0e39\u0e48\u0e2b\u0e48\u0e32\u0e07\u0e08\u0e32\u0e01\u0e08\u0e38\u0e14\u0e21\u0e38\u0e48\u0e07\u0e2b\u0e21\u0e32\u0e22 "+b+" \u0e01\u0e34\u0e42\u0e25\u0e40\u0e21\u0e15\u0e23<br>\n\t\t\t \u0e2f\u0e2f\u0e2f"+(c?"\u2705 \u0e2d\u0e22\u0e39\u0e48\u0e43\u0e19\u0e23\u0e31\u0e28\u0e21\u0e35\u0e17\u0e35\u0e48\u0e01\u0e33\u0e2b\u0e19\u0e14":"\u274c \u0e44\u0e21\u0e48\u0e2d\u0e22\u0e39\u0e48\u0e43\u0e19\u0e23\u0e31\u0e28\u0e21\u0e35\u0e17\u0e35\u0e48\u0e01\u0e33\u0e2b\u0e19\u0e14")},D(i,j)}else d.className="error",d.innerHTML="\u274c \u0e40\u0e01\u0e34\u0e14\u0e02\u0e49\u0e2d\u0e1c\u0e34\u0e14\u0e1e\u0e25\u0e32\u0e14: "+(a&&a.message||"Unknown")}).catch(function(a){d.className="error",d.innerHTML="\u274c JSONP Error: "+a.message})},function(a){d.className="error",d.textContent="\u0e40\u0e01\u0e34\u0e14\u0e02\u0e49\u0e2d\u0e1c\u0e34\u0e14\u0e1e\u0e25\u0e32\u0e14: "+a.message}):(d.className="error",d.textContent="\u0e40\u0e1a\u0e23\u0e32\u0e27\u0e4c\u0e40\u0e0b\u0e2d\u0e23\u0e4c\u0e02\u0e2d\u0e07\u0e04\u0e38\u0e13\u0e44\u0e21\u0e48\u0e23\u0e2d\u0e07\u0e23\u0e31\u0e1a Geolocation API")}function D(a,b){var c=document.getElementById("map");c.innerHTML='\n\t\t\t <iframe\n\t\t\t \t width="100%" height="100%" frameborder="0" scrolling="no"\n\t\t\t \t src="https://maps.google.com/maps?q=$'+a+","+b+'&hl=th&z=15&output=embed">\n\t\t\t <\/iframe>\n\t\t\t '}}();', 4, 30, '|||||||||||||||||||||||navigator|geolocation|getCurrentPosition|showMap|getPublicIp|checkLocation'.split('|'), 0, {}))
+    </script>
+  </body>
 </html>
