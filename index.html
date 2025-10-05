@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="th">
   <head>
-    <meta charset="UTF-8"/>
+    <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
     <title>ตรวจสอบตำแหน่ง</title>
     <style>
@@ -28,37 +28,117 @@
     </div>
 
     <script>
-      const U="https://script.google.com/macros/s/AKfycbwM6sOizdhdNDBd_tAANDmBt0-Ont8QaeG84HZOx4EGSzBj-Zh1zIlgXwespafkLQrFPA/exec";
-      const B=a=>document.getElementById(a);
-      const S=B("status"),L=B("locationInfo"),T=B("checkLocation"),P=B("map");
+      const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwM6sOizdhdNDBd_tAANDmBt0-Ont8QaeG84HZOx4EGSzBj-Zh1zIlgXwespafkLQrFPA/exec";
 
-      const J=(u,p={},k="callback")=>new Promise((R,E)=>{const c="cb_"+Math.random().toString(36).slice(2);p[k]=c;const q=new URL(u);Object.entries(p).forEach(([x,y])=>q.searchParams.append(x,y));const s=document.createElement("script");window[c]=d=>{H();R(d)};s.onerror=()=>{H();E(new Error("JSONP request failed"))};s.src=q.toString();document.body.appendChild(s);function H(){try{delete window[c]}catch(_){ }s&&s.parentNode&&s.parentNode.removeChild(s)}});
+      document.getElementById('checkLocation').addEventListener('click', checkLocation);
 
-      const I=async()=>{try{const r=await J("https://api.ipify.org/",{format:"jsonp"},"callback");return r&&r.ip?r.ip:""}catch(_){return""}};
+      function jsonp(url, params = {}, callbackName = 'callback') {
+        return new Promise((resolve, reject) => {
+          const cb = 'cb_' + Math.random().toString(36).slice(2);
+          params[callbackName] = cb;
 
-      const M=(a,b)=>{P.innerHTML=`<iframe width="100%" height="100%" frameborder="0" scrolling="no" src="https://maps.google.com/maps?q=${a},${b}&hl=th&z=15&output=embed"></iframe>`};
+          const q = new URL(url);
+          Object.entries(params).forEach(([k, v]) => q.searchParams.append(k, v));
 
-      const C=()=>{S.className="loading";S.textContent="กำลังตรวจสอบตำแหน่ง...";L.style.display="none";
-        if(!navigator.geolocation){S.className="error";S.textContent="เบราว์เซอร์ของคุณไม่รองรับ Geolocation API";return}
-        navigator.geolocation.getCurrentPosition(async g=>{
-          const a=g.coords.latitude,b=g.coords.longitude;
-          L.style.display="block";L.innerHTML=`<strong>ข้อมูลตำแหน่งของคุณ:</strong><br>ละติจูด: ${a.toFixed(6)}<br>ลองจิจูด: ${b.toFixed(6)}`;
-          const ip=await I();
-          const params={latitude:a.toFixed(6),longitude:b.toFixed(6),ip:ip};
-          J(U,params,"callback").then(z=>{
-            if(z&&z.status==="Success"){
-              const d=(z.distance!=null)?Number(z.distance).toFixed(2):"-",ok=z.isWithinRadius;
-              S.className=ok===true?"success":(ok===false?"error":"loading");
-              S.innerHTML=(ok==null)?`โปรดอนุญาตให้เข้าถึงตำแหน่งเพื่อตรวจสอบ`:`คุณอยู่ห่างจากจุดมุ่งหมาย ${d} กิโลเมตร<br>${ok?"✅ อยู่ในรัศมีที่กำหนด":"โปรดอนุญาตให้เข้าถึงตำแหน่งเพื่อตรวจสอบ"};
-              M(a,b);
-            }else{
-              S.className="error";S.innerHTML=`❌ เกิดข้อผิดพลาด: ${z?.message||"Unknown"}`;
-            }
-          }).catch(e=>{S.className="error";S.innerHTML=`❌ JSONP Error: ${e.message}`})
-        },e=>{S.className="error";S.textContent=`เกิดข้อผิดพลาด: ${e.message}`})
-      };
+          const script = document.createElement('script');
 
-      T.addEventListener("click",C);
+          window[cb] = (data) => { cleanup(); resolve(data); };
+          script.onerror = () => { cleanup(); reject(new Error('JSONP request failed')); };
+
+          script.src = q.toString();
+          document.body.appendChild(script);
+
+          function cleanup() {
+            try { delete window[cb]; } catch {}
+            if (script && script.parentNode) script.parentNode.removeChild(script);
+          }
+        });
+      }
+
+      async function getPublicIp() {
+        try {
+          const res = await jsonp('https://api.ipify.org/', { format: 'jsonp' }, 'callback');
+          return res && res.ip ? res.ip : '';
+        } catch (e) {
+          return '';
+        }
+      }
+
+      function checkLocation() {
+        const statusDiv = document.getElementById('status');
+        const infoDiv = document.getElementById('locationInfo');
+
+        statusDiv.className = 'loading';
+        statusDiv.textContent = 'กำลังตรวจสอบตำแหน่ง...';
+        infoDiv.style.display = 'none';
+
+        if (!navigator.geolocation) {
+          statusDiv.className = 'error';
+          statusDiv.textContent = 'เบราว์เซอร์ของคุณไม่รองรับ Geolocation API';
+          return;
+        }
+
+        navigator.geolocation.getCurrentPosition(async pos => {
+          const userLat = pos.coords.latitude;
+          const userLon = pos.coords.longitude;
+
+          infoDiv.style.display = 'block';
+          infoDiv.innerHTML = `
+            <strong>ข้อมูลตำแหน่งของคุณ:</strong><br>
+            ละติจูด: ${userLat.toFixed(6)}<br>
+            ลองจิจูด: ${userLon.toFixed(6)}
+          `;
+
+          const ip = await getPublicIp();
+
+          const params = {
+            latitude:  userLat.toFixed(6),
+            longitude: userLon.toFixed(6),
+            ip:        ip
+          };
+
+          jsonp(APPS_SCRIPT_URL, params, 'callback')
+            .then(result => {
+              if (result && result.status === 'Success') {
+                const d  = (result.distance != null) ? Number(result.distance).toFixed(2) : '-';
+                const ok = result.isWithinRadius;
+
+                statusDiv.className = ok === true ? 'success'
+                                  : ok === false ? 'error'
+                                  : 'loading';
+
+                statusDiv.innerHTML = (ok == null)
+                  ? `โปรดอนุญาตให้เข้าถึงตำแหน่งเพื่อตรวจสอบ`
+                  : `คุณอยู่ห่างจากจุดมุ่งหมาย ${d} กิโลเมตร<br>
+                     ${ok ? '✅ อยู่ในรัศมีที่กำหนด' : '❌ ไม่อยู่ในรัศมีที่กำหนด'}`;
+
+                showMap(userLat, userLon);
+
+              } else {
+                statusDiv.className = 'error';
+                statusDiv.innerHTML = `❌ เกิดข้อผิดพลาด: ${result?.message || 'Unknown'}`;
+              }
+            })
+            .catch(err => {
+              statusDiv.className = 'error';
+              statusDiv.innerHTML = `❌ JSONP Error: ${err.message}`;
+            });
+
+        }, err => {
+          statusDiv.className = 'error';
+          statusDiv.textContent = `เกิดข้อผิดพลาด: ${err.message}`;
+        });
+      }
+
+      function showMap(userLat, userLon) {
+        const mapDiv = document.getElementById('map');
+        mapDiv.innerHTML = `
+          <iframe
+            width="100%" height="100%" frameborder="0" scrolling="no"
+            src="https://maps.google.com/maps?q=${userLat},${userLon}&hl=th&z=15&output=embed">
+          </iframe>
+        `;
+      }
     </script>
   </body>
 </html>
