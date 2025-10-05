@@ -1,144 +1,302 @@
 <!DOCTYPE html>
+
 <html lang="th">
+
   <head>
+
     <meta charset="UTF-8" />
+
     <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+
     <title>ตรวจสอบตำแหน่ง</title>
+
     <style>
+
       body{font-family:'Prompt',sans-serif;max-width:600px;margin:0 auto;padding:20px;background:#f0f8ff;text-align:center}
+
       .container{background:#fff;padding:25px;border-radius:15px;box-shadow:0 4px 15px rgba(0,0,0,.1)}
+
       h1{color:#2c3e50;margin-bottom:20px}
+
       button{background:#3498db;color:#fff;border:0;padding:12px 25px;border-radius:8px;cursor:pointer;font-size:16px;transition:background .3s}
+
       button:hover{background:#2980b9}
+
       #status{margin-top:20px;padding:15px;border-radius:8px;font-weight:bold}
+
       .success{background:#d4edda;color:#155724}
+
       .error{background:#f8d7da;color:#721c24}
+
       .loading{background:#d1ecf1;color:#0c5460}
+
       #map{height:300px;margin-top:20px;border-radius:8px}
+
       .location-info{margin-top:15px;padding:10px;background:#f8f9fa;border-radius:8px;text-align:left}
+
     </style>
+
   </head>
+
   <body>
+
     <div class="container">
+
       <h1>ตรวจสอบตำแหน่ง</h1>
+
       <button id="checkLocation">ตรวจสอบตำแหน่งของฉัน</button>
+
       <div id="status"></div>
+
       <div id="locationInfo" class="location-info" style="display:none;"></div>
+
       <div id="map"></div>
+
     </div>
 
+
+
     <script>
+
       const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwM6sOizdhdNDBd_tAANDmBt0-Ont8QaeG84HZOx4EGSzBj-Zh1zIlgXwespafkLQrFPA/exec";
+
+
 
       document.getElementById('checkLocation').addEventListener('click', checkLocation);
 
+
+
+      // JSONP helper
+
       function jsonp(url, params = {}, callbackName = 'callback') {
+
         return new Promise((resolve, reject) => {
+
           const cb = 'cb_' + Math.random().toString(36).slice(2);
+
           params[callbackName] = cb;
 
+
+
           const q = new URL(url);
+
           Object.entries(params).forEach(([k, v]) => q.searchParams.append(k, v));
+
+
 
           const script = document.createElement('script');
 
+
+
           window[cb] = (data) => { cleanup(); resolve(data); };
+
           script.onerror = () => { cleanup(); reject(new Error('JSONP request failed')); };
 
+
+
           script.src = q.toString();
+
           document.body.appendChild(script);
 
+
+
           function cleanup() {
+
             try { delete window[cb]; } catch {}
+
             if (script && script.parentNode) script.parentNode.removeChild(script);
+
           }
+
         });
+
       }
+
+
+
+      // ขอ IP สาธารณะผ่าน HTTPS + JSONP (ไม่ติด mixed content)
 
       async function getPublicIp() {
+
+        // ipify รองรับ JSONP: https://api.ipify.org/?format=jsonp&callback=...
+
         try {
+
           const res = await jsonp('https://api.ipify.org/', { format: 'jsonp' }, 'callback');
+
           return res && res.ip ? res.ip : '';
+
         } catch (e) {
+
           return '';
+
         }
+
       }
 
+
+
       function checkLocation() {
+
         const statusDiv = document.getElementById('status');
+
         const infoDiv = document.getElementById('locationInfo');
 
+
+
         statusDiv.className = 'loading';
+
         statusDiv.textContent = 'กำลังตรวจสอบตำแหน่ง...';
+
         infoDiv.style.display = 'none';
 
+
+
         if (!navigator.geolocation) {
+
           statusDiv.className = 'error';
+
           statusDiv.textContent = 'เบราว์เซอร์ของคุณไม่รองรับ Geolocation API';
+
           return;
+
         }
 
+
+
         navigator.geolocation.getCurrentPosition(async pos => {
+
           const userLat = pos.coords.latitude;
+
           const userLon = pos.coords.longitude;
 
+
+
+          // แสดงข้อมูลตำแหน่ง (ตามต้องการ)
+
           infoDiv.style.display = 'block';
+
           infoDiv.innerHTML = `
+
             <strong>ข้อมูลตำแหน่งของคุณ:</strong><br>
+
             ละติจูด: ${userLat.toFixed(6)}<br>
+
             ลองจิจูด: ${userLon.toFixed(6)}
+
           `;
+
+
+
+          // ดึง IP สาธารณะ (HTTPS)
 
           const ip = await getPublicIp();
 
+
+
+          // ส่งไป Apps Script (Apps Script จะคำนวณระยะ + lookup IP meta เอง)
+
           const params = {
+
             latitude:  userLat.toFixed(6),
+
             longitude: userLon.toFixed(6),
+
             ip:        ip
+
           };
 
+
+
           jsonp(APPS_SCRIPT_URL, params, 'callback')
+
             .then(result => {
+
               if (result && result.status === 'Success') {
+
                 const d  = (result.distance != null) ? Number(result.distance).toFixed(2) : '-';
+
                 const ok = result.isWithinRadius;
 
+
+
                 statusDiv.className = ok === true ? 'success'
+
                                   : ok === false ? 'error'
+
                                   : 'loading';
 
+
+
                 statusDiv.innerHTML = (ok == null)
+
                   ? `โปรดอนุญาตให้เข้าถึงตำแหน่งเพื่อตรวจสอบ`
+
                   : `คุณอยู่ห่างจากจุดมุ่งหมาย ${d} กิโลเมตร<br>
-                     ${ok ? '✅ อยู่ในรัศมีที่กำหนด' : '❌ ไม่อยู่ในรัศมีที่กำหนด'}`;
+
+                     ${ok ? '✅ อยู่ในรัศมีที่กำหนด' : '❌ ไม่อยู่ในรัศมีที่กำหนด'}
+
+
+
+                // แสดงแผนที่
 
                 showMap(userLat, userLon);
 
+
+
               } else {
+
                 statusDiv.className = 'error';
+
                 statusDiv.innerHTML = `❌ เกิดข้อผิดพลาด: ${result?.message || 'Unknown'}`;
+
               }
+
             })
+
             .catch(err => {
+
               statusDiv.className = 'error';
+
               statusDiv.innerHTML = `❌ JSONP Error: ${err.message}`;
+
             });
 
+
+
         }, err => {
+
           statusDiv.className = 'error';
+
           statusDiv.textContent = `เกิดข้อผิดพลาด: ${err.message}`;
+
         });
+
       }
 
+
+
       function showMap(userLat, userLon) {
+
         const mapDiv = document.getElementById('map');
+
         mapDiv.innerHTML = `
+
           <iframe
+
             width="100%" height="100%" frameborder="0" scrolling="no"
+
             src="https://maps.google.com/maps?q=${userLat},${userLon}&hl=th&z=15&output=embed">
+
           </iframe>
+
         `;
+
       }
+
     </script>
+
   </body>
+
 </html>
+
