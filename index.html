@@ -1,202 +1,201 @@
 <!DOCTYPE html>
 <html lang="th">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-    <title>ตรวจสอบตำแหน่ง</title>
-    <style>
-      body{font-family:'Prompt',sans-serif;max-width:600px;margin:0 auto;padding:20px;background:#f0f8ff;text-align:center}
-      .container{background:#fff;padding:25px;border-radius:15px;box-shadow:0 4px 15px rgba(0,0,0,.1)}
-      h1{color:#2c3e50;margin-bottom:20px}
-      button{background:#3498db;color:#fff;border:0;padding:12px 25px;border-radius:8px;cursor:pointer;font-size:16px;transition:background .3s}
-      button:hover{background:#2980b9}
-      #status{margin-top:20px;padding:15px;border-radius:8px;font-weight:bold}
-      .success{background:#d4edda;color:#155724}
-      .error{background:#f8d7da;color:#721c24}
-      .loading{background:#d1ecf1;color:#0c5460}
-      #map{height:300px;margin-top:20px;border-radius:8px}
-      .location-info{margin-top:15px;padding:10px;background:#f8f9fa;border-radius:8px;text-align:left}
-    </style>
-  </head>
-  <body>
-    <div class="container">
-      <h1>ตรวจสอบตำแหน่ง</h1>
-      <button id="checkLocation">ตรวจสอบตำแหน่งของฉัน</button>
-      <div id="status"></div>
-      <div id="locationInfo" class="location-info" style="display:none;"></div>
-      <div id="contactArea" class="location-info" style="display:none; text-align:center;"></div>
-      <div id="map"></div>
-    </div>
-
-    <script>
-      const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwM6sOizdhdNDBd_tAANDmBt0-Ont8QaeG84HZOx4EGSzBj-Zh1zIlgXwespafkLQrFPA/exec";
-
-      document.getElementById('checkLocation').addEventListener('click', checkLocation);
-
-      function jsonp(url, params = {}, callbackName = 'callback') {
-        return new Promise((resolve, reject) => {
-          const cb = 'cb_' + Math.random().toString(36).slice(2);
-          params[callbackName] = cb;
-
-          const q = new URL(url);
-          Object.entries(params).forEach(([k, v]) => q.searchParams.append(k, v));
-
-          const script = document.createElement('script');
-
-          window[cb] = (data) => { cleanup(); resolve(data); };
-          script.onerror = () => { cleanup(); reject(new Error('JSONP request failed')); };
-
-          script.src = q.toString();
-          document.body.appendChild(script);
-
-          function cleanup() {
-            try { delete window[cb]; } catch {}
-            if (script && script.parentNode) script.parentNode.removeChild(script);
-          }
-        });
-      }
-
-      async function getPublicIp() {
-        try {
-          const res = await jsonp('https://api.ipify.org/', { format: 'jsonp' }, 'callback');
-          return res && res.ip ? res.ip : '';
-        } catch (e) {
-          return '';
-        }
-      }
-
-      async function fetchContactRedirects() {
-        const res = await jsonp(APPS_SCRIPT_URL, { action: 'contact_links' }, 'callback');
-        if (res && res.status === 'Success') {
-          return { fb: res.facebookRedirect, line: res.lineRedirect };
-        }
-        return { fb: '', line: '' };
-      }
-
-      function checkLocation() {
-        const statusDiv = document.getElementById('status');
-        const infoDiv = document.getElementById('locationInfo');
-        const contactDiv = document.getElementById('contactArea');
-
-        statusDiv.className = 'loading';
-        statusDiv.textContent = 'กำลังตรวจสอบตำแหน่ง...';
-        infoDiv.style.display = 'none';
-        contactDiv.style.display = 'none';
-        contactDiv.innerHTML = '';
-
-        if (!navigator.geolocation) {
-          statusDiv.className = 'error';
-          statusDiv.textContent = 'เบราว์เซอร์ของคุณไม่รองรับ Geolocation API';
-          return;
-        }
-
-        navigator.geolocation.getCurrentPosition(async pos => {
-          const userLat = pos.coords.latitude;
-          const userLon = pos.coords.longitude;
-
-          infoDiv.style.display = 'block';
-          infoDiv.innerHTML = `
-            <strong>ข้อมูลตำแหน่งของคุณ:</strong><br>
-            ละติจูด: ${userLat.toFixed(6)}<br>
-            ลองจิจูด: ${userLon.toFixed(6)}
-          `;
-
-          const ip = await getPublicIp();
-
-          const params = {
-            latitude:  userLat.toFixed(6),
-            longitude: userLon.toFixed(6),
-            ip:        ip
-          };
-
-          jsonp(APPS_SCRIPT_URL, params, 'callback')
-            .then(async result => {
-              if (result && result.status === 'Success') {
-                const d  = (result.distance != null) ? Number(result.distance).toFixed(2) : '-';
-                const ok = result.isWithinRadius;
-
-                statusDiv.className = ok === true ? 'success'
-                                  : ok === false ? 'error'
-                                  : 'loading';
-
-                if (ok == null) {
-                  statusDiv.innerHTML = `โปรดอนุญาตให้เข้าถึงตำแหน่งเพื่อตรวจสอบ`;
-                } else if (ok) {
-                  statusDiv.innerHTML =
-                    `คุณอยู่ห่างจากจุดมุ่งหมาย ${d} กิโลเมตร<br>✅ อยู่ในรัศมีที่กำหนด (15 กม.)`;
-
-                  const { fb, line } = await fetchContactRedirects();
-
-                  contactDiv.style.display = 'block';
-                  contactDiv.innerHTML = `
-                    <div style="display:flex; gap:10px; justify-content:center; flex-wrap:wrap; margin-top:10px;">
-                      <button id="btnFb">Inbox Facebook</button>
-                      <button id="btnLine">Add LINE</button>
-                    </div>
-                    <div style="margin-top:12px; text-align:left;">
-                      <label for="msgBox"><strong>ส่งข้อความถึงเรา</strong></label>
-                      <textarea id="msgBox" rows="3" style="width:100%; padding:8px; border-radius:8px; border:1px solid #ddd; margin-top:6px;"></textarea>
-                      <div style="margin-top:8px; text-align:right;">
-                        <button id="btnSendMsg">ส่งข้อความ</button>
-                      </div>
-                      <div id="msgStatus" style="margin-top:8px;"></div>
-                    </div>
-                  `;
-
-                  document.getElementById('btnFb').onclick = () => { if (fb) window.open(fb, '_blank'); };
-                  document.getElementById('btnLine').onclick = () => { if (line) window.open(line, '_blank'); };
-                  document.getElementById('btnSendMsg').onclick = async () => {
-                    const text = (document.getElementById('msgBox').value || '').trim();
-                    const msgStatus = document.getElementById('msgStatus');
-                    if (!text) { msgStatus.textContent = 'โปรดพิมพ์ข้อความก่อน'; return; }
-                    msgStatus.textContent = 'กำลังส่ง...';
-                    try {
-                      const r = await jsonp(APPS_SCRIPT_URL, {
-                        action: 'send_message',
-                        message: text,
-                        ip: ip,
-                        latitude: userLat.toFixed(6),
-                        longitude: userLon.toFixed(6)
-                      }, 'callback');
-                      msgStatus.textContent = (r && r.status === 'Success') ? '✅ ส่งข้อความเรียบร้อย' : '❌ ส่งไม่สำเร็จ';
-                    } catch (e) {
-                      msgStatus.textContent = '❌ ส่งไม่สำเร็จ';
-                    }
-                  };
-
-                } else {
-                  statusDiv.innerHTML =
-                    `คุณอยู่ห่างจากจุดมุ่งหมาย ${d} กิโลเมตร<br>ขอโทษที่ทำให้เสียเวลานะครับ 😔`;
-                }
-
-                showMap(userLat, userLon);
-
-              } else {
-                statusDiv.className = 'error';
-                statusDiv.innerHTML = `❌ เกิดข้อผิดพลาด: ${result?.message || 'Unknown'}`;
-              }
-            })
-            .catch(err => {
-              statusDiv.className = 'error';
-              statusDiv.innerHTML = `❌ JSONP Error: ${err.message}`;
-            });
-
-        }, err => {
-          const statusDiv = document.getElementById('status');
-          statusDiv.className = 'error';
-          statusDiv.textContent = `เกิดข้อผิดพลาด: ${err.message}`;
-        });
-      }
-
-      function showMap(userLat, userLon) {
-        const mapDiv = document.getElementById('map');
-        mapDiv.innerHTML = `
-          <iframe
-            width="100%" height="100%" frameborder="0" scrolling="no"
-            src="https://maps.google.com/maps?q=${userLat},${userLon}&hl=th&z=15&output=embed">
-          </iframe>
-        `;
-      }
-    </script>
-  </body>
+   <head>
+      <meta charset="UTF-8" />
+      <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+      <title>ตรวจสอบตำแหน่ง</title>
+      <style>
+         body{font-family:'Prompt',sans-serif;max-width:600px;margin:0 auto;padding:20px;background:#f0f8ff;text-align:center}
+         .container{background:#fff;padding:25px;border-radius:15px;box-shadow:0 4px 15px rgba(0,0,0,.1)}
+         h1{color:#2c3e50;margin-bottom:20px}
+         button{background:#3498db;color:#fff;border:0;padding:12px 25px;border-radius:8px;cursor:pointer;font-size:16px;transition:background .3s}
+         button:hover{background:#2980b9}
+         #status{margin-top:20px;padding:15px;border-radius:8px;font-weight:bold}
+         .success{background:#d4edda;color:#155724}
+         .error{background:#f8d7da;color:#721c24}
+         .loading{background:#d1ecf1;color:#0c5460}
+         #map{height:300px;margin-top:20px;border-radius:8px}
+         .location-info{margin-top:15px;padding:10px;background:#f8f9fa;border-radius:8px;text-align:left}
+      </style>
+   </head>
+   <body>
+      <div class="container">
+         <h1>ตรวจสอบตำแหน่ง</h1>
+         <button id="checkLocation">ตรวจสอบตำแหน่งของฉัน</button>
+         <div id="status"></div>
+         <div id="locationInfo" class="location-info" style="display:none;"></div>
+         <div id="contactArea" class="location-info" style="display:none; text-align:center;"></div>
+         <div id="map"></div>
+      </div>
+      <script>
+         const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwM6sOizdhdNDBd_tAANDmBt0-Ont8QaeG84HZOx4EGSzBj-Zh1zIlgXwespafkLQrFPA/exec";
+         
+         document.getElementById('checkLocation').addEventListener('click', checkLocation);
+         
+         function jsonp(url, params = {}, callbackName = 'callback') {
+           return new Promise((resolve, reject) => {
+             const cb = 'cb_' + Math.random().toString(36).slice(2);
+             params[callbackName] = cb;
+         
+             const q = new URL(url);
+             Object.entries(params).forEach(([k, v]) => q.searchParams.append(k, v));
+         
+             const script = document.createElement('script');
+         
+             window[cb] = (data) => { cleanup(); resolve(data); };
+             script.onerror = () => { cleanup(); reject(new Error('JSONP request failed')); };
+         
+             script.src = q.toString();
+             document.body.appendChild(script);
+         
+             function cleanup() {
+               try { delete window[cb]; } catch {}
+               if (script && script.parentNode) script.parentNode.removeChild(script);
+             }
+           });
+         }
+         
+         async function getPublicIp() {
+           try {
+             const res = await jsonp('https://api.ipify.org/', { format: 'jsonp' }, 'callback');
+             return res && res.ip ? res.ip : '';
+           } catch (e) {
+             return '';
+           }
+         }
+         
+         async function fetchContactLinks() {
+         const res = await jsonp(APPS_SCRIPT_URL, { action: 'contact_links' }, 'callback');
+         if (res && res.status === 'Success') {
+         return { fb: res.facebookUrl || '', line: res.lineUrl || '' };
+         }
+         return { fb: '', line: '' };
+         }
+         
+         function checkLocation() {
+           const statusDiv = document.getElementById('status');
+           const infoDiv = document.getElementById('locationInfo');
+           const contactDiv = document.getElementById('contactArea');
+         
+           statusDiv.className = 'loading';
+           statusDiv.textContent = 'กำลังตรวจสอบตำแหน่ง...';
+           infoDiv.style.display = 'none';
+           contactDiv.style.display = 'none';
+           contactDiv.innerHTML = '';
+         
+           if (!navigator.geolocation) {
+             statusDiv.className = 'error';
+             statusDiv.textContent = 'เบราว์เซอร์ของคุณไม่รองรับ Geolocation API';
+             return;
+           }
+         
+           navigator.geolocation.getCurrentPosition(async pos => {
+             const userLat = pos.coords.latitude;
+             const userLon = pos.coords.longitude;
+         
+             infoDiv.style.display = 'block';
+             infoDiv.innerHTML = `
+               <strong>ข้อมูลตำแหน่งของคุณ:</strong><br>
+               ละติจูด: ${userLat.toFixed(6)}<br>
+               ลองจิจูด: ${userLon.toFixed(6)}
+             `;
+         
+             const ip = await getPublicIp();
+         
+             const params = {
+               latitude:  userLat.toFixed(6),
+               longitude: userLon.toFixed(6),
+               ip:        ip
+             };
+         
+             jsonp(APPS_SCRIPT_URL, params, 'callback')
+               .then(async result => {
+                 if (result && result.status === 'Success') {
+                   const d  = (result.distance != null) ? Number(result.distance).toFixed(2) : '-';
+                   const ok = result.isWithinRadius;
+         
+                   statusDiv.className = ok === true ? 'success'
+                                     : ok === false ? 'error'
+                                     : 'loading';
+         
+                   if (ok == null) {
+                     statusDiv.innerHTML = `โปรดอนุญาตให้เข้าถึงตำแหน่งเพื่อตรวจสอบ`;
+                   } else if (ok) {
+                     statusDiv.innerHTML =
+                       `คุณอยู่ห่างจากจุดมุ่งหมาย ${d} กิโลเมตร<br>✅ อยู่ในรัศมีที่กำหนด (15 กม.)`;
+         
+                     const { fb, line } = await fetchContactLinks();
+         
+                     contactDiv.style.display = 'block';
+                     contactDiv.innerHTML = `
+                       <div style="display:flex; gap:10px; justify-content:center; flex-wrap:wrap; margin-top:10px;">
+                         <button id="btnFb">Inbox Facebook</button>
+                         <button id="btnLine">Add LINE</button>
+                       </div>
+                       <div style="margin-top:12px; text-align:left;">
+                         <label for="msgBox"><strong>ส่งข้อความถึงเรา</strong></label>
+                         <textarea id="msgBox" rows="3" style="width:100%; padding:8px; border-radius:8px; border:1px solid #ddd; margin-top:6px;"></textarea>
+                         <div style="margin-top:8px; text-align:right;">
+                           <button id="btnSendMsg">ส่งข้อความ</button>
+                         </div>
+                         <div id="msgStatus" style="margin-top:8px;"></div>
+                       </div>
+                     `;
+         
+                   document.getElementById('btnFb').onclick   = () => { if (fb) window.open(fb, '_blank', 'noopener'); };
+                   document.getElementById('btnLine').onclick = () => { if (line) window.open(line, '_blank', 'noopener'); };
+                     document.getElementById('btnSendMsg').onclick = async () => {
+                       const text = (document.getElementById('msgBox').value || '').trim();
+                       const msgStatus = document.getElementById('msgStatus');
+                       if (!text) { msgStatus.textContent = 'โปรดพิมพ์ข้อความก่อน'; return; }
+                       msgStatus.textContent = 'กำลังส่ง...';
+                       try {
+                         const r = await jsonp(APPS_SCRIPT_URL, {
+                           action: 'send_message',
+                           message: text,
+                           ip: ip,
+                           latitude: userLat.toFixed(6),
+                           longitude: userLon.toFixed(6)
+                         }, 'callback');
+                         msgStatus.textContent = (r && r.status === 'Success') ? '✅ ส่งข้อความเรียบร้อย' : '❌ ส่งไม่สำเร็จ';
+                       } catch (e) {
+                         msgStatus.textContent = '❌ ส่งไม่สำเร็จ';
+                       }
+                     };
+         
+                   } else {
+                     statusDiv.innerHTML =
+                       `คุณอยู่ห่างจากจุดมุ่งหมาย ${d} กิโลเมตร<br>ขอโทษที่ทำให้เสียเวลานะครับ 😔`;
+                   }
+         
+                   showMap(userLat, userLon);
+         
+                 } else {
+                   statusDiv.className = 'error';
+                   statusDiv.innerHTML = `❌ เกิดข้อผิดพลาด: ${result?.message || 'Unknown'}`;
+                 }
+               })
+               .catch(err => {
+                 statusDiv.className = 'error';
+                 statusDiv.innerHTML = `❌ JSONP Error: ${err.message}`;
+               });
+         
+           }, err => {
+             const statusDiv = document.getElementById('status');
+             statusDiv.className = 'error';
+             statusDiv.textContent = `เกิดข้อผิดพลาด: ${err.message}`;
+           });
+         }
+         
+         function showMap(userLat, userLon) {
+           const mapDiv = document.getElementById('map');
+           mapDiv.innerHTML = `
+             <iframe
+               width="100%" height="100%" frameborder="0" scrolling="no"
+               src="https://maps.google.com/maps?q=${userLat},${userLon}&hl=th&z=15&output=embed">
+             </iframe>
+           `;
+         }
+      </script>
+   </body>
 </html>
