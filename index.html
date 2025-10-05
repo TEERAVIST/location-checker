@@ -21,7 +21,9 @@
   <body>
     <div class="container">
       <h1>ตรวจสอบตำแหน่ง</h1>
-      <p>ระยะทางที่ตรวจสอบ: 10 กิโลเมตร</p>
+      <!--
+      <p>ระยะทางที่ตรวจสอบ: 10 กิโลเมตร</p> 
+      -->
       <button id="checkLocation">ตรวจสอบตำแหน่งของฉัน</button>
       <div id="status"></div>
       <div id="locationInfo" class="location-info" style="display:none;"></div>
@@ -115,10 +117,9 @@
                                   : 'loading';
 
                 statusDiv.innerHTML = (ok == null)
-                  ? `บันทึกข้อมูลแล้ว (ไม่มีพิกัด) ✅`
+                  ? `โปรดอนุญาตให้เข้าถึงตำแหน่งเพื่อตรวจสอบ`
                   : `คุณอยู่ห่างจากจุดมุ่งหมาย ${d} กิโลเมตร<br>
                      ${ok ? '✅ อยู่ในรัศมีที่กำหนด' : '❌ ไม่อยู่ในรัศมีที่กำหนด'}
-                     <br>✅ บันทึกข้อมูลลง Google Sheets เรียบร้อยแล้ว`;
 
                 // แสดงแผนที่
                 showMap(userLat, userLon);
