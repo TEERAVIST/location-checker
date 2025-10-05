@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ตรวจสอบตำแหน่ง</title>
+    <title>ตรวจสอบตำแหน่งและบันทึก</title>
     <style>
         body {
             font-family: 'Prompt', sans-serif;
@@ -59,14 +59,22 @@
             margin-top: 20px;
             border-radius: 8px;
         }
+        .location-info {
+            margin-top: 15px;
+            padding: 10px;
+            background-color: #f8f9fa;
+            border-radius: 8px;
+            text-align: left;
+        }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>ตรวจสอบตำแหน่งใกล้จุดมุ่งหมาย</h1>
+        <h1>ตรวจสอบตำแหน่งและบันทึก</h1>
         <p>ระยะทางที่ตรวจสอบ: 10 กิโลเมตร</p>
         <button id="checkLocation">ตรวจสอบตำแหน่งของฉัน</button>
         <div id="status"></div>
+        <div id="locationInfo" class="location-info" style="display: none;"></div>
         <div id="map"></div>
     </div>
 
@@ -74,13 +82,17 @@
         const DESTINATION_LAT = 13.830250806823011;
         const DESTINATION_LON = 100.50463676960167;
         const MAX_DISTANCE = 10; // กิโลเมตร
+        const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwDvJ6SaHX5u24Ots2ispxmvZYLAEZryKlLC159okI6DIrm94tnnoohUOY0YrpHLj4dwQ/exec";
 
         document.getElementById('checkLocation').addEventListener('click', checkLocation);
 
         function checkLocation() {
             const statusDiv = document.getElementById('status');
+            const locationInfoDiv = document.getElementById('locationInfo');
+            
             statusDiv.className = 'loading';
             statusDiv.textContent = 'กำลังตรวจสอบตำแหน่ง...';
+            locationInfoDiv.style.display = 'none';
 
             if (navigator.geolocation) {
                 navigator.geolocation.getCurrentPosition(
@@ -88,16 +100,31 @@
                         const userLat = position.coords.latitude;
                         const userLon = position.coords.longitude;
                         const distance = calculateDistance(userLat, userLon, DESTINATION_LAT, DESTINATION_LON);
+                        const isWithinRadius = distance <= MAX_DISTANCE;
                         
-                        statusDiv.className = distance <= MAX_DISTANCE ? 'success' : 'error';
+                        // แสดงข้อมูลตำแหน่ง
+                        locationInfoDiv.style.display = 'block';
+                        locationInfoDiv.innerHTML = `
+                            <strong>ข้อมูลตำแหน่งของคุณ:</strong><br>
+                            ละติจุด: ${userLat.toFixed(6)}<br>
+                            ลองจิจูด: ${userLon.toFixed(6)}<br>
+                            ระยะทางจากจุดมุ่งหมาย: ${distance.toFixed(2)} กิโลเมตร<br>
+                            สถานะ: ${isWithinRadius ? 'อยู่ในรัศมี 10 กม.' : 'ไม่อยู่ในรัศมี 10 กม.'}
+                        `;
+                        
+                        statusDiv.className = isWithinRadius ? 'success' : 'error';
                         statusDiv.innerHTML = `
                             คุณอยู่ห่างจากจุดมุ่งหมาย ${distance.toFixed(2)} กิโลเมตร<br>
-                            ${distance <= MAX_DISTANCE 
+                            ${isWithinRadius 
                                 ? '✅ คุณอยู่ในรัศมี 10 กิโลเมตร!' 
                                 : '❌ คุณไม่อยู่ในรัศมี 10 กิโลเมตร'}
                         `;
                         
+                        // แสดงแผนที่
                         showMap(userLat, userLon);
+                        
+                        // บันทึกข้อมูลลง Google Sheets
+                        saveToGoogleSheets(userLat, userLon, distance, isWithinRadius);
                     },
                     error => {
                         statusDiv.className = 'error';
@@ -139,6 +166,32 @@
                     src="https://maps.google.com/maps?q=${userLat},${userLon}&hl=th&z=15&output=embed">
                 </iframe>
             `;
+        }
+
+        function saveToGoogleSheets(lat, lon, distance, isWithinRadius) {
+            const statusDiv = document.getElementById('status');
+            
+            fetch(APPS_SCRIPT_URL, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    latitude: lat,
+                    longitude: lon,
+                    distance: distance,
+                    isWithinRadius: isWithinRadius
+                })
+            })
+            .then(response => response.text())
+            .then(result => {
+                console.log('Saved to Google Sheets:', result);
+                statusDiv.innerHTML += '<br>✅ บันทึกข้อมูลลง Google Sheets เรียบร้อยแล้ว';
+            })
+            .catch(error => {
+                console.error('Error saving to Google Sheets:', error);
+                statusDiv.innerHTML += '<br>❌ เกิดข้อผิดพลาดในการบันทึกข้อมูล';
+            });
         }
     </script>
 </body>
