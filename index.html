@@ -78,150 +78,128 @@
          <div id="map"></div>
       </div>
       <script>
-         const DESTINATION_LAT = 13.830250806823011;
-         const DESTINATION_LON = 100.50463676960167;
-         const MAX_DISTANCE = 10; // กิโลเมตร
-         const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwM6sOizdhdNDBd_tAANDmBt0-Ont8QaeG84HZOx4EGSzBj-Zh1zIlgXwespafkLQrFPA/exec";
+         const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwM6sOizdhdNDBd_tAANDmBt0-Ont8QaeG84HZOx4EGSzBj-Zh1zIlgXwespafkLQrFPA/exec"; 
          
          document.getElementById('checkLocation').addEventListener('click', checkLocation);
          
-         function checkLocation() {
-             const statusDiv = document.getElementById('status');
-             const locationInfoDiv = document.getElementById('locationInfo');
-             
-             statusDiv.className = 'loading';
-             statusDiv.textContent = 'กำลังตรวจสอบตำแหน่ง...';
-             locationInfoDiv.style.display = 'none';
+         function jsonp(url, params = {}, callbackName = 'callback') {
+           return new Promise((resolve, reject) => {
+             const cb = 'cb_' + Math.random().toString(36).slice(2);
+             params[callbackName] = cb;
          
-             if (navigator.geolocation) {
-                 navigator.geolocation.getCurrentPosition(
-                     position => {
-                         const userLat = position.coords.latitude;
-                         const userLon = position.coords.longitude;
-                         const distance = calculateDistance(userLat, userLon, DESTINATION_LAT, DESTINATION_LON);
-                         const isWithinRadius = distance <= MAX_DISTANCE;
-                         
-                         // แสดงข้อมูลตำแหน่ง
-                         locationInfoDiv.style.display = 'block';
-                         locationInfoDiv.innerHTML = `
-                             <strong>ข้อมูลตำแหน่งของคุณ:</strong><br>
-                             ละติจุด: ${userLat.toFixed(6)}<br>
-                             ลองจิจูด: ${userLon.toFixed(6)}<br>
-                             ระยะทางจากจุดมุ่งหมาย: ${distance.toFixed(2)} กิโลเมตร<br>
-                             สถานะ: ${isWithinRadius ? 'อยู่ในรัศมี 10 กม.' : 'ไม่อยู่ในรัศมี 10 กม.'}
-                         `;
-                         
-                         statusDiv.className = isWithinRadius ? 'success' : 'error';
-                         statusDiv.innerHTML = `
-                             คุณอยู่ห่างจากจุดมุ่งหมาย ${distance.toFixed(2)} กิโลเมตร<br>
-                             ${isWithinRadius 
-                                 ? '✅ คุณอยู่ในรัศมี 10 กิโลเมตร!' 
-                                 : '❌ คุณไม่อยู่ในรัศมี 10 กิโลเมตร'}
-                         `;
-                         
-                         // แสดงแผนที่
-                         showMap(userLat, userLon);
-                         
-                         // บันทึกข้อมูลลง Google Sheets
-                         saveToGoogleSheets(userLat, userLon, distance, isWithinRadius);
-                     },
-                     error => {
-                         statusDiv.className = 'error';
-                         statusDiv.textContent = `เกิดข้อผิดพลาด: ${error.message}`;
-                     }
-                 );
-             } else {
-                 statusDiv.className = 'error';
-                 statusDiv.textContent = 'เบราว์เซอร์ของคุณไม่รองรับ Geolocation API';
+             const q = new URL(url);
+             Object.entries(params).forEach(([k, v]) => q.searchParams.append(k, v));
+         
+             const script = document.createElement('script');
+         
+             window[cb] = (data) => { cleanup(); resolve(data); };
+             script.onerror = () => { cleanup(); reject(new Error('JSONP request failed')); };
+         
+             script.src = q.toString();
+             document.body.appendChild(script);
+         
+             function cleanup() {
+               try { delete window[cb]; } catch {}
+               if (script && script.parentNode) script.parentNode.removeChild(script);
              }
+           });
          }
          
-         function calculateDistance(lat1, lon1, lat2, lon2) {
-             const R = 6371; // รัศมีโลก (กิโลเมตร)
-             const dLat = deg2rad(lat2 - lat1);
-             const dLon = deg2rad(lon2 - lon1);
-             const a = 
-                 Math.sin(dLat/2) * Math.sin(dLat/2) +
-                 Math.cos(deg2rad(lat1)) * Math.cos(deg2rad(lat2)) * 
-                 Math.sin(dLon/2) * Math.sin(dLon/2);
-             const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-             return R * c;
+         // ดึงข้อมูล IP จาก ip-api (JSONP)
+         async function getIpInfo() {
+           // fields: ลดขนาด response ให้พอใช้
+           const url = 'http://ip-api.com/json/';
+           const params = {
+             fields: 'status,message,query,city,regionName,country,zip,timezone,org,lat,lon'
+           };
+           const res = await jsonp(url, params, 'callback');
+           if (!res || res.status !== 'success') {
+             return null;
+           }
+           // map ฟิลด์ตามรูปแบบที่ GAS คาดหวัง
+           const locStr = (res.lat != null && res.lon != null) ? `${res.lat},${res.lon}` : '';
+           return {
+             ip: res.query || '',
+             hostname: '',                 // ip-api ฟรีมักไม่คืน hostname; ถ้าต้องการจริงๆ ยิง ipinfo.io เพิ่มได้
+             city: res.city || '',
+             region: res.regionName || '',
+             country: res.country || '',
+             postal: res.zip || '',
+             timezone: res.timezone || '',
+             org: res.org || '',
+             loc: locStr
+           };
          }
          
-         function deg2rad(deg) {
-             return deg * (Math.PI/180);
-         }
+         function checkLocation() {
+           const statusDiv = document.getElementById('status');
+           const infoDiv = document.getElementById('locationInfo');
          
-         function showMap(userLat, userLon) {
-             const mapDiv = document.getElementById('map');
-             mapDiv.innerHTML = `
-                 <iframe 
-                     width="100%" 
-                     height="100%" 
-                     frameborder="0" 
-                     scrolling="no" 
-                     marginheight="0" 
-                     marginwidth="0" 
-                     src="https://maps.google.com/maps?q=${userLat},${userLon}&hl=th&z=15&output=embed">
-                 </iframe>
+           statusDiv.className = 'loading';
+           statusDiv.textContent = 'กำลังตรวจสอบตำแหน่ง...';
+           infoDiv.style.display = 'none';
+         
+           if (!navigator.geolocation) {
+             statusDiv.className = 'error';
+             statusDiv.textContent = 'เบราว์เซอร์ของคุณไม่รองรับ Geolocation API';
+             return;
+           }
+         
+           navigator.geolocation.getCurrentPosition(async pos => {
+             const userLat = pos.coords.latitude;
+             const userLon = pos.coords.longitude;
+         
+             infoDiv.style.display = 'block';
+             infoDiv.innerHTML = `
+               <strong>ข้อมูลตำแหน่งของคุณ:</strong><br>
+               ละติจูด: ${userLat.toFixed(6)}<br>
+               ลองจิจูด: ${userLon.toFixed(6)}
              `;
-         }
          
-           function jsonp(url, params = {}, callbackName = 'callback') {
-         return new Promise((resolve, reject) => {
-         const cb = 'cb_' + Math.random().toString(36).slice(2);
-         params[callbackName] = cb;
+             // 1) ดึง IP-meta (JSONP)
+             let ipMeta = await getIpInfo();
+             if (!ipMeta) ipMeta = { ip:'', hostname:'', city:'', region:'', country:'', postal:'', timezone:'', org:'', loc:'' };
          
-         const script = document.createElement('script');
-         const q = new URL(url);
-         Object.entries(params).forEach(([k, v]) => q.searchParams.append(k, v));
+             // 2) ส่งทั้งหมดไป Apps Script (JSONP)
+             const params = {
+               latitude:  userLat.toFixed(6),
+               longitude: userLon.toFixed(6),
+               ip:        ipMeta.ip,
+               hostname:  ipMeta.hostname,
+               city:      ipMeta.city,
+               region:    ipMeta.region,
+               country:   ipMeta.country,
+               postal:    ipMeta.postal,
+               timezone:  ipMeta.timezone,
+               org:       ipMeta.org,
+               loc:       ipMeta.loc
+             };
          
-         // สร้าง callback แบบชั่วคราวบน window
-         window[cb] = (data) => {
-         resolve(data);
-         cleanup();
-         };
+             jsonp(APPS_SCRIPT_URL, params, 'callback')
+               .then(result => {
+                 if (result && result.status === 'Success') {
+                   const d = Number(result.distance).toFixed(2);
+                   const ok = result.isWithinRadius;
+                   statusDiv.className = ok ? 'success' : 'error';
+                   statusDiv.innerHTML = `
+                     คุณอยู่ห่างจากจุดมุ่งหมาย ${d} กิโลเมตร<br>
+                     ${ok ? '✅ อยู่ในรัศมีที่กำหนด' : '❌ ไม่อยู่ในรัศมีที่กำหนด'}
+                     <br>✅ บันทึกข้อมูลลง Google Sheets เรียบร้อยแล้ว
+                   `;
+                 } else {
+                   statusDiv.className = 'error';
+                   statusDiv.innerHTML = `❌ เกิดข้อผิดพลาด: ${result?.message || 'Unknown'}`;
+                 }
+               })
+               .catch(err => {
+                 statusDiv.className = 'error';
+                 statusDiv.innerHTML = `❌ JSONP Error: ${err.message}`;
+               });
          
-         script.src = q.toString();
-         script.onerror = () => {
-         reject(new Error('JSONP request failed'));
-         cleanup();
-         };
-         
-         document.body.appendChild(script);
-         
-         function cleanup() {
-         try { delete window[cb]; } catch {}
-         if (script && script.parentNode) script.parentNode.removeChild(script);
-         }
-         });
-         }
-         
-         // ❷ แก้ฟังก์ชัน saveToGoogleSheets ให้เรียก JSONP
-         function saveToGoogleSheets(lat, lon, distance, isWithinRadius) {
-         const statusDiv = document.getElementById('status');
-         const params = {
-         latitude: lat.toFixed(6),
-         longitude: lon.toFixed(6),
-         distance: distance.toFixed(2),
-         isWithinRadius: isWithinRadius.toString()
-         };
-         
-         jsonp(APPS_SCRIPT_URL, params, 'callback')
-         .then(result => {
-         if (result && result.status === 'Success') {
-          console.log('Saved to Google Sheets:', result.message);
-          statusDiv.innerHTML += '<br>✅ บันทึกข้อมูลลง Google Sheets เรียบร้อยแล้ว (JSONP)';
-         } else {
-          const msg = result && result.message ? result.message : 'Unknown error';
-          console.error('Error saving to Google Sheets:', msg);
-          statusDiv.innerHTML += `<br>❌ เกิดข้อผิดพลาดในการบันทึกข้อมูล: ${msg}`;
-         }
-         })
-         .catch(err => {
-         console.error('JSONP Error:', err);
-         statusDiv.innerHTML += '<br>❌ เกิดข้อผิดพลาดระหว่างเรียก JSONP';
-         });
+           }, err => {
+             statusDiv.className = 'error';
+             statusDiv.textContent = `เกิดข้อผิดพลาด: ${err.message}`;
+           });
          }
       </script>
    </body>
