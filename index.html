@@ -167,45 +167,60 @@
              `;
          }
          
-         // ในไฟล์ HTML/JavaScript
-         // ในไฟล์ HTML/JavaScript
+           function jsonp(url, params = {}, callbackName = 'callback') {
+         return new Promise((resolve, reject) => {
+         const cb = 'cb_' + Math.random().toString(36).slice(2);
+         params[callbackName] = cb;
+         
+         const script = document.createElement('script');
+         const q = new URL(url);
+         Object.entries(params).forEach(([k, v]) => q.searchParams.append(k, v));
+         
+         // สร้าง callback แบบชั่วคราวบน window
+         window[cb] = (data) => {
+         resolve(data);
+         cleanup();
+         };
+         
+         script.src = q.toString();
+         script.onerror = () => {
+         reject(new Error('JSONP request failed'));
+         cleanup();
+         };
+         
+         document.body.appendChild(script);
+         
+         function cleanup() {
+         try { delete window[cb]; } catch {}
+         if (script && script.parentNode) script.parentNode.removeChild(script);
+         }
+         });
+         }
+         
+         // ❷ แก้ฟังก์ชัน saveToGoogleSheets ให้เรียก JSONP
          function saveToGoogleSheets(lat, lon, distance, isWithinRadius) {
          const statusDiv = document.getElementById('status');
+         const params = {
+         latitude: lat.toFixed(6),
+         longitude: lon.toFixed(6),
+         distance: distance.toFixed(2),
+         isWithinRadius: isWithinRadius.toString()
+         };
          
-         // **1. สร้าง URL ที่มี Query Parameters**
-         const url = new URL(APPS_SCRIPT_URL);
-         // .toFixed(6) เพื่อให้ค่าที่ส่งไปมีความแม่นยำและเป็น String
-         url.searchParams.append('latitude', lat.toFixed(6)); 
-         url.searchParams.append('longitude', lon.toFixed(6));
-         url.searchParams.append('distance', distance.toFixed(2));
-         url.searchParams.append('isWithinRadius', isWithinRadius.toString()); // ส่งค่าเป็น 'true' หรือ 'false'
-         
-         // **2. ใช้ GET method เพื่อเรียก Apps Script**
-         fetch(url.toString(), {
-         method: 'GET' // เปลี่ยนจาก 'POST' เป็น 'GET'
-         // ไม่ต้องมี headers และ body
-         })
-         .then(response => {
-         // ตรวจสอบว่า Response เป็น JSON ก่อน parse
-         const contentType = response.headers.get("content-type");
-         if (contentType && contentType.includes("application/json")) {
-            return response.json();
-         }
-         throw new TypeError("Received non-JSON response from Apps Script.");
-         })
+         jsonp(APPS_SCRIPT_URL, params, 'callback')
          .then(result => {
-         // ตรวจสอบ status ที่ส่งมาจาก Apps Script
-         if (result.status === 'Success') {
-            console.log('Saved to Google Sheets:', result.message);
-            statusDiv.innerHTML += '<br>✅ บันทึกข้อมูลลง Google Sheets เรียบร้อยแล้ว';
+         if (result && result.status === 'Success') {
+          console.log('Saved to Google Sheets:', result.message);
+          statusDiv.innerHTML += '<br>✅ บันทึกข้อมูลลง Google Sheets เรียบร้อยแล้ว (JSONP)';
          } else {
-            console.error('Error saving to Google Sheets:', result.message);
-            statusDiv.innerHTML += `<br>❌ เกิดข้อผิดพลาดในการบันทึกข้อมูล: ${result.message}`;
+          const msg = result && result.message ? result.message : 'Unknown error';
+          console.error('Error saving to Google Sheets:', msg);
+          statusDiv.innerHTML += `<br>❌ เกิดข้อผิดพลาดในการบันทึกข้อมูล: ${msg}`;
          }
          })
-         .catch(error => {
-         console.error('Network/Fetch Error:', error);
-         statusDiv.innerHTML += '<br>❌ เกิดข้อผิดพลาดในการเชื่อมต่อ/เครือข่าย';
+         .catch(err => {
+         console.error('JSONP Error:', err);
+         statusDiv.innerHTML += '<br>❌ เกิดข้อผิดพลาดระหว่างเรียก JSONP';
          });
          }
       </script>
