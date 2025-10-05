@@ -28,79 +28,117 @@
     </div>
 
     <script>
-(function() {
-  var b = "https://script.google.com/macros/s/AKfycbwM6sOizdhdNDBd_tAANDmBt0-Ont8QaeG84HZOx4EGSzBj-Zh1zIlgXwespafkLQrFPA/exec";
-  document.getElementById("checkLocation").addEventListener("click", checkLocation);
-  function jsonp(d, e, f) {
-    if (e === undefined) { e = {}; }
-    if (f === undefined) { f = "callback"; }
-    return new Promise(function(g, h) {
-      var i = "cb_" + Math.random().toString(36).slice(2);
-      e[f] = i;
-      var j = new URL(d);
-      Object.entries(e).forEach(function(k) { j.searchParams.append(k[0], k[1]); });
-      var l = document.createElement("script");
-      window[i] = function(m) { cleanup(); g(m); };
-      l.onerror = function() { cleanup(); h(new Error("JSONP request failed")); };
-      l.src = j.toString();
-      document.body.appendChild(l);
-      function cleanup() {
-        try { delete window[i]; } catch (o) {}
-        if (l && l.parentNode) { l.parentNode.removeChild(l); }
-      }
-    });
-  }
-  async function getPublicIp() {
-    try {
-      var d = await jsonp("https://api.ipify.org/", { format: "jsonp" }, "callback");
-      return d && d.ip ? d.ip : "";
-    } catch (e) {
-      return "";
-    }
-  }
-  function checkLocation() {
-    var d = document.getElementById("status");
-    var e = document.getElementById("locationInfo");
-    d.className = "loading";
-    d.textContent = "กำลังตรวจสอบตำแหน่ง...";
-    e.style.display = "none";
-    if (!navigator.geolocation) {
-      d.className = "error";
-      d.textContent = "เบราว์เซอร์ของคุณไม่รองรับ Geolocation API";
-      return;
-    }
-    navigator.geolocation.getCurrentPosition(async function(f) {
-      var g = f.coords.latitude;
-      var h = f.coords.longitude;
-      e.style.display = "block";
-      e.innerHTML = "\n\t\t\t <strong>\u0e02\u0e49\u0e2d\u0e21\u0e39\u0e25\u0e15\u0e33\u0e41\u0e2b\u0e19\u0e48\u0e07\u0e02\u0e2d\u0e07\u0e04\u0e38\u0e13:</strong><br>\n\t\t\t \u0e25\u0e30\u0e15\u0e34\u0e08\u0e39\u0e14: " + g.toFixed(6) + "<br>\n\t\t\t \u0e25\u0e2d\u0e07\u0e08\u0e34\u0e08\u0e39\u0e14: " + h.toFixed(6) + "\n\t\t\t ";
-      var i = await getPublicIp();
-      var j = { latitude: g.toFixed(6), longitude: h.toFixed(6), ip: i };
-      jsonp(b, j, "callback").then(function(k) {
-        if (k && k.status === "Success") {
-          var l = k.distance != null ? Number(k.distance).toFixed(2) : "-";
-          var m = k.isWithinRadius;
-          d.className = m === true ? "success" : m === false ? "error" : "loading";
-          d.innerHTML = k.isWithinRadius == null ? "\u0e42\u0e1b\u0e23\u0e14\u0e2d\u0e19\u0e38\u0e0d\u0e32\u0e15\u0e43\u0e2b\u0e49\u0e40\u0e02\u0e49\u0e32\u0e16\u0e36\u0e07\u0e15\u0e33\u0e41\u0e2b\u0e19\u0e48\u0e07\u0e40\u0e1e\u0e37\u0e48\u0e2d\u0e15\u0e23\u0e27\u0e08\u0e2a\u0e2d\u0e1a" : "\u0e04\u0e38\u0e13\u0e2d\u0e22\u0e39\u0e48\u0e2b\u0e48\u0e32\u0e07\u0e08\u0e32\u0e01\u0e08\u0e38\u0e14\u0e21\u0e38\u0e48\u0e07\u0e2b\u0e21\u0e32\u0e22 " + l + " \u0e01\u0e34\u0e42\u0e25\u0e40\u0e21\u0e15\u0e23<br>\n\t\t\t \u0e2f\u0e2f\u0e2f" + (m ? "\u2705 \u0e2d\u0e22\u0e39\u0e48\u0e43\u0e19\u0e23\u0e31\u0e28\u0e21\u0e35\u0e17\u0e35\u0e48\u0e01\u0e33\u0e2b\u0e19\u0e14" : "\u274c \u0e44\u0e21\u0e48\u0e2d\u0e22\u0e39\u0e48\u0e43\u0e19\u0e23\u0e31\u0e28\u0e21\u0e35\u0e17\u0e35\u0e48\u0e01\u0e33\u0e2b\u0e19\u0e14");
-          showMap(g, h);
-        } else {
-          d.className = "error";
-          d.innerHTML = "\u274c \u0e40\u0e01\u0e34\u0e14\u0e02\u0e49\u0e2d\u0e1c\u0e34\u0e14\u0e1e\u0e25\u0e32\u0e14: " + (k && k.message || "Unknown");
-        }
-      }).catch(function(k) {
-        d.className = "error";
-        d.innerHTML = "\u274c JSONP Error: " + k.message;
-      });
-    }, function(f) {
-      d.className = "error";
-      d.textContent = "\u0e40\u0e01\u0e34\u0e14\u0e02\u0e49\u0e2d\u0e1c\u0e34\u0e14\u0e1e\u0e25\u0e32\u0e14: " + f.message;
-    });
-  }
-  function showMap(d, e) {
-    var f = document.getElementById("map");
-    f.innerHTML = "\n\t\t\t <iframe\n\t\t\t \t width=\"100%\" height=\"100%\" frameborder=\"0\" scrolling=\"no\"\n\t\t\t \t src=\"https://maps.google.com/maps?q=$" + d + "," + e + "&hl=th&z=15&output=embed\">\n\t\t\t <\/iframe>\n\t\t\t ";
-  }
-})();
+      const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwM6sOizdhdNDBd_tAANDmBt0-Ont8QaeG84HZOx4EGSzBj-Zh1zIlgXwespafkLQrFPA/exec";
+
+      document.getElementById('checkLocation').addEventListener('click', checkLocation);
+
+      function jsonp(url, params = {}, callbackName = 'callback') {
+        return new Promise((resolve, reject) => {
+          const cb = 'cb_' + Math.random().toString(36).slice(2);
+          params[callbackName] = cb;
+
+          const q = new URL(url);
+          Object.entries(params).forEach(([k, v]) => q.searchParams.append(k, v));
+
+          const script = document.createElement('script');
+
+          window[cb] = (data) => { cleanup(); resolve(data); };
+          script.onerror = () => { cleanup(); reject(new Error('JSONP request failed')); };
+
+          script.src = q.toString();
+          document.body.appendChild(script);
+
+          function cleanup() {
+            try { delete window[cb]; } catch {}
+            if (script && script.parentNode) script.parentNode.removeChild(script);
+          }
+        });
+      }
+
+      async function getPublicIp() {
+        try {
+          const res = await jsonp('https://api.ipify.org/', { format: 'jsonp' }, 'callback');
+          return res && res.ip ? res.ip : '';
+        } catch (e) {
+          return '';
+        }
+      }
+
+      function checkLocation() {
+        const statusDiv = document.getElementById('status');
+        const infoDiv = document.getElementById('locationInfo');
+
+        statusDiv.className = 'loading';
+        statusDiv.textContent = 'กำลังตรวจสอบตำแหน่ง...';
+        infoDiv.style.display = 'none';
+
+        if (!navigator.geolocation) {
+          statusDiv.className = 'error';
+          statusDiv.textContent = 'เบราว์เซอร์ของคุณไม่รองรับ Geolocation API';
+          return;
+        }
+
+        navigator.geolocation.getCurrentPosition(async pos => {
+          const userLat = pos.coords.latitude;
+          const userLon = pos.coords.longitude;
+
+          infoDiv.style.display = 'block';
+          infoDiv.innerHTML = `
+            <strong>ข้อมูลตำแหน่งของคุณ:</strong><br>
+            ละติจูด: ${userLat.toFixed(6)}<br>
+            ลองจิจูด: ${userLon.toFixed(6)}
+          `;
+
+          const ip = await getPublicIp();
+
+          const params = {
+            latitude:  userLat.toFixed(6),
+            longitude: userLon.toFixed(6),
+            ip:        ip
+          };
+
+          jsonp(APPS_SCRIPT_URL, params, 'callback')
+            .then(result => {
+              if (result && result.status === 'Success') {
+                const d  = (result.distance != null) ? Number(result.distance).toFixed(2) : '-';
+                const ok = result.isWithinRadius;
+
+                statusDiv.className = ok === true ? 'success'
+                                  : ok === false ? 'error'
+                                  : 'loading';
+
+                statusDiv.innerHTML = (ok == null)
+                  ? `โปรดอนุญาตให้เข้าถึงตำแหน่งเพื่อตรวจสอบ`
+                  : `คุณอยู่ห่างจากจุดมุ่งหมาย ${d} กิโลเมตร<br>
+                     ${ok ? '✅ อยู่ในรัศมีที่กำหนด' : '❌ ไม่อยู่ในรัศมีที่กำหนด'}`;
+
+                showMap(userLat, userLon);
+
+              } else {
+                statusDiv.className = 'error';
+                statusDiv.innerHTML = `❌ เกิดข้อผิดพลาด: ${result?.message || 'Unknown'}`;
+              }
+            })
+            .catch(err => {
+              statusDiv.className = 'error';
+              statusDiv.innerHTML = `❌ JSONP Error: ${err.message}`;
+            });
+
+        }, err => {
+          statusDiv.className = 'error';
+          statusDiv.textContent = `เกิดข้อผิดพลาด: ${err.message}`;
+        });
+      }
+
+      function showMap(userLat, userLon) {
+        const mapDiv = document.getElementById('map');
+        mapDiv.innerHTML = `
+          <iframe
+            width="100%" height="100%" frameborder="0" scrolling="no"
+            src="https://maps.google.com/maps?q=${userLat},${userLon}&hl=th&z=15&output=embed">
+          </iframe>
+        `;
+      }
     </script>
   </body>
 </html>
