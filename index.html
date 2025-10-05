@@ -168,34 +168,43 @@
          }
          
          // ในไฟล์ HTML/JavaScript
+         // ในไฟล์ HTML/JavaScript
          function saveToGoogleSheets(lat, lon, distance, isWithinRadius) {
          const statusDiv = document.getElementById('status');
          
          // **1. สร้าง URL ที่มี Query Parameters**
          const url = new URL(APPS_SCRIPT_URL);
-         url.searchParams.append('latitude', lat);
-         url.searchParams.append('longitude', lon);
-         url.searchParams.append('distance', distance);
-         url.searchParams.append('isWithinRadius', isWithinRadius);
+         // .toFixed(6) เพื่อให้ค่าที่ส่งไปมีความแม่นยำและเป็น String
+         url.searchParams.append('latitude', lat.toFixed(6)); 
+         url.searchParams.append('longitude', lon.toFixed(6));
+         url.searchParams.append('distance', distance.toFixed(2));
+         url.searchParams.append('isWithinRadius', isWithinRadius.toString()); // ส่งค่าเป็น 'true' หรือ 'false'
          
          // **2. ใช้ GET method เพื่อเรียก Apps Script**
          fetch(url.toString(), {
-         method: 'GET' // เปลี่ยนเป็น GET
+         method: 'GET' // เปลี่ยนจาก 'POST' เป็น 'GET'
          // ไม่ต้องมี headers และ body
          })
-         .then(response => response.json()) // เปลี่ยนเป็น response.json() เนื่องจาก Apps Script ตอบกลับเป็น JSON
+         .then(response => {
+         // ตรวจสอบว่า Response เป็น JSON ก่อน parse
+         const contentType = response.headers.get("content-type");
+         if (contentType && contentType.includes("application/json")) {
+            return response.json();
+         }
+         throw new TypeError("Received non-JSON response from Apps Script.");
+         })
          .then(result => {
          // ตรวจสอบ status ที่ส่งมาจาก Apps Script
          if (result.status === 'Success') {
-             console.log('Saved to Google Sheets:', result.message);
-             statusDiv.innerHTML += '<br>✅ บันทึกข้อมูลลง Google Sheets เรียบร้อยแล้ว';
+            console.log('Saved to Google Sheets:', result.message);
+            statusDiv.innerHTML += '<br>✅ บันทึกข้อมูลลง Google Sheets เรียบร้อยแล้ว';
          } else {
-             console.error('Error saving to Google Sheets:', result.message);
-             statusDiv.innerHTML += `<br>❌ เกิดข้อผิดพลาดในการบันทึกข้อมูล: ${result.message}`;
+            console.error('Error saving to Google Sheets:', result.message);
+            statusDiv.innerHTML += `<br>❌ เกิดข้อผิดพลาดในการบันทึกข้อมูล: ${result.message}`;
          }
          })
          .catch(error => {
-         console.error('Network Error saving to Google Sheets:', error);
+         console.error('Network/Fetch Error:', error);
          statusDiv.innerHTML += '<br>❌ เกิดข้อผิดพลาดในการเชื่อมต่อ/เครือข่าย';
          });
          }
