@@ -49,7 +49,7 @@
             if(z&&z.status==="Success"){
               const d=(z.distance!=null)?Number(z.distance).toFixed(2):"-",ok=z.isWithinRadius;
               S.className=ok===true?"success":(ok===false?"error":"loading");
-              S.innerHTML=(ok==null)?`โปรดอนุญาตให้เข้าถึงตำแหน่งเพื่อตรวจสอบ`:`คุณอยู่ห่างจากจุดมุ่งหมาย ${d} กิโลเมตร<br>${ok?"✅ อยู่ในรัศมีที่กำหนด":"❌ ไม่อยู่ในรัศมีที่กำหนด"}<br>✅ บันทึกข้อมูลลง Google Sheets เรียบร้อยแล้ว`;
+              S.innerHTML=(ok==null)?`โปรดอนุญาตให้เข้าถึงตำแหน่งเพื่อตรวจสอบ`:`คุณอยู่ห่างจากจุดมุ่งหมาย ${d} กิโลเมตร<br>${ok?"✅ อยู่ในรัศมีที่กำหนด":"โปรดอนุญาตให้เข้าถึงตำแหน่งเพื่อตรวจสอบ"};
               M(a,b);
             }else{
               S.className="error";S.innerHTML=`❌ เกิดข้อผิดพลาด: ${z?.message||"Unknown"}`;
