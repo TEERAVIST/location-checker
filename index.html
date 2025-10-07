@@ -18,7 +18,7 @@
       .location-info{margin-top:15px;padding:10px;background:#f8f9fa;border-radius:8px;text-align:left}
     </style>
     <script>
-      (function enforceHTTPS(){
+      (function(){
         var isLocal = location.hostname === 'localhost' || location.hostname === '127.0.0.1';
         if (!isLocal && location.protocol !== 'https:') {
           location.replace('https://' + location.host + location.pathname + location.search + location.hash);
@@ -62,7 +62,7 @@
       async function getPublicIp() {
         try {
           const res = await jsonp('https://api.ipify.org/', { format: 'jsonp' }, 'callback');
-          return res && res.ip ? res.ip : '';
+        return res && res.ip ? res.ip : '';
         } catch (e) {
           return '';
         }
@@ -74,6 +74,12 @@
           return { fb: res.facebookUrl || '', line: res.lineUrl || '' };
         }
         return { fb: '', line: '' };
+      }
+
+      async function fetchMedia() {
+        const res = await jsonp(APPS_SCRIPT_URL, { action: 'media_links', keys: 'resume' }, 'callback');
+        if (res && res.status === 'Success' && Array.isArray(res.items)) return res.items;
+        return [];
       }
 
       function checkLocation() {
@@ -124,20 +130,21 @@
                 const d  = (result.distance != null) ? Number(result.distance).toFixed(2) : '-';
                 const ok = result.isWithinRadius;
 
-                statusDiv.className = ok === true ? 'success'
-                                  : ok === false ? 'error'
-                                  : 'loading';
+                statusDiv.className = ok === true ? 'success' : ok === false ? 'error' : 'loading';
 
                 if (ok == null) {
                   statusDiv.innerHTML = `โปรดอนุญาตให้เข้าถึงตำแหน่งเพื่อตรวจสอบ`;
                 } else if (ok) {
                   statusDiv.innerHTML =
-                    `คุณอยู่ห่างจากจุดมุ่งหมาย ${d} กิโลเมตร<br>✅ อยู่ในรัศมีที่กำหนด ส่งข้อความหรือ inbox ทาง facbook ส่วนตัวหรือ Add Line ก็ได้ครับ ขอบคุณครับ`;
+                    `คุณอยู่ห่างจากจุดมุ่งหมาย ${d} กิโลเมตร<br>✅ อยู่ในรัศมีที่กำหนด`;
 
-                  const { fb, line } = await fetchContactLinks();
+                  const [{ fb, line }, mediaItems] = await Promise.all([
+                    fetchContactLinks(),
+                    fetchMedia()
+                  ]);
 
                   contactDiv.style.display = 'block';
-                  contactDiv.innerHTML = `
+                  let html = `
                     <div style="display:flex; gap:10px; justify-content:center; flex-wrap:wrap; margin-top:10px;">
                       <button id="btnFb">Inbox Facebook</button>
                       <button id="btnLine">Add LINE</button>
@@ -152,9 +159,24 @@
                     </div>
                   `;
 
+                  if (mediaItems.length) {
+                    const m = mediaItems[0];
+                    html += `
+                      <div style="margin-top:14px; text-align:center;">
+                        <img src="${m.viewUrl}" alt="${m.title}" style="max-width:100%; border-radius:8px;"/>
+                        <div style="margin-top:8px;">
+                          <a id="btnDownloadResume" href="${m.downloadUrl}" target="_blank" rel="noopener" download>${'ดาวน์โหลด ' + m.title}</a>
+                        </div>
+                      </div>
+                    `;
+                  }
+
+                  contactDiv.innerHTML = html;
+
                   document.getElementById('btnFb').onclick   = () => { if (fb) window.open(fb, '_blank', 'noopener'); };
                   document.getElementById('btnLine').onclick = () => { if (line) window.open(line, '_blank', 'noopener'); };
-                  document.getElementById('btnSendMsg').onclick = async () => {
+                  const btnSend = document.getElementById('btnSendMsg');
+                  if (btnSend) btnSend.onclick = async () => {
                     const text = (document.getElementById('msgBox').value || '').trim();
                     const msgStatus = document.getElementById('msgStatus');
                     if (!text) { msgStatus.textContent = 'โปรดพิมพ์ข้อความก่อน'; return; }
@@ -206,9 +228,7 @@
         statusDiv.innerHTML = `เบราว์เซอร์บล็อกการระบุตำแหน่ง (ไม่ใช่ Secure Context).<br>
         กรุณาเปิดลิงก์แบบ <b>https://</b> (เช่น <b>https://location.tomo-naja.org</b> หรือ <b>https://teeravist.github.io/location-checker/</b>)<br>
         หรือเปิดในเบราว์เซอร์หลักของเครื่อง แล้วลองใหม่อีกครั้ง`;
-        getPublicIp().then(ip => {
-          jsonp(APPS_SCRIPT_URL, { ip: ip }, 'callback').catch(()=>{});
-        });
+        getPublicIp().then(ip => { jsonp(APPS_SCRIPT_URL, { ip: ip }, 'callback').catch(()=>{}); });
       }
 
       function showMap(userLat, userLon) {
