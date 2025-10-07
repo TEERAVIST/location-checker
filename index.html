@@ -5,20 +5,80 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
     <title>ตรวจสอบตำแหน่ง</title>
     <style>
-      body{font-family:'Prompt',sans-serif;max-width:600px;margin:0 auto;padding:20px;background:#f0f8ff;text-align:center}
-      .container{background:#fff;padding:25px;border-radius:15px;box-shadow:0 4px 15px rgba(0,0,0,.1)}
-      h1{color:#2c3e50;margin-bottom:20px}
-      button{background:#3498db;color:#fff;border:0;padding:12px 25px;border-radius:8px;cursor:pointer;font-size:16px;transition:background .3s}
-      button:hover{background:#2980b9}
-      #status{margin-top:20px;padding:15px;border-radius:8px;font-weight:bold}
-      .success{background:#d4edda;color:#155724}
-      .error{background:#f8d7da;color:#721c24}
-      .loading{background:#d1ecf1;color:#0c5460}
-      #map{height:300px;margin-top:20px;border-radius:8px}
-      .location-info{margin-top:15px;padding:10px;background:#f8f9fa;border-radius:8px;text-align:left}
+      body {
+        font-family: 'Prompt', sans-serif;
+        max-width: 600px;
+        margin: 0 auto;
+        padding: 20px;
+        background: #f0f8ff;
+        text-align: center
+      }
+
+      .container {
+        background: #fff;
+        padding: 25px;
+        border-radius: 15px;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, .1)
+      }
+
+      h1 {
+        color: #2c3e50;
+        margin-bottom: 20px
+      }
+
+      button {
+        background: #3498db;
+        color: #fff;
+        border: 0;
+        padding: 12px 25px;
+        border-radius: 8px;
+        cursor: pointer;
+        font-size: 16px;
+        transition: background .3s
+      }
+
+      button:hover {
+        background: #2980b9
+      }
+
+      #status {
+        margin-top: 20px;
+        padding: 15px;
+        border-radius: 8px;
+        font-weight: bold
+      }
+
+      .success {
+        background: #d4edda;
+        color: #155724
+      }
+
+      .error {
+        background: #f8d7da;
+        color: #721c24
+      }
+
+      .loading {
+        background: #d1ecf1;
+        color: #0c5460
+      }
+
+      #map {
+        height: 300px;
+        margin-top: 20px;
+        border-radius: 8px
+      }
+
+      .location-info {
+        margin-top: 15px;
+        padding: 10px;
+        background: #f8f9fa;
+        border-radius: 8px;
+        text-align: left
+      }
     </style>
     <script>
-      (function(){
+      (function() {
         var isLocal = location.hostname === 'localhost' || location.hostname === '127.0.0.1';
         if (!isLocal && location.protocol !== 'https:') {
           location.replace('https://' + location.host + location.pathname + location.search + location.hash);
@@ -48,12 +108,21 @@
           const q = new URL(url);
           Object.entries(params).forEach(([k, v]) => q.searchParams.append(k, v));
           const script = document.createElement('script');
-          window[cb] = (data) => { cleanup(); resolve(data); };
-          script.onerror = () => { cleanup(); reject(new Error('JSONP request failed')); };
+          window[cb] = (data) => {
+            cleanup();
+            resolve(data);
+          };
+          script.onerror = () => {
+            cleanup();
+            reject(new Error('JSONP request failed'));
+          };
           script.src = q.toString();
           document.body.appendChild(script);
+
           function cleanup() {
-            try { delete window[cb]; } catch {}
+            try {
+              delete window[cb];
+            } catch {}
             if (script && script.parentNode) script.parentNode.removeChild(script);
           }
         });
@@ -61,23 +130,36 @@
 
       async function getPublicIp() {
         try {
-          const res = await jsonp('https://api.ipify.org/', { format: 'jsonp' }, 'callback');
-        return res && res.ip ? res.ip : '';
+          const res = await jsonp('https://api.ipify.org/', {
+            format: 'jsonp'
+          }, 'callback');
+          return res && res.ip ? res.ip : '';
         } catch (e) {
           return '';
         }
       }
 
       async function fetchContactLinks() {
-        const res = await jsonp(APPS_SCRIPT_URL, { action: 'contact_links' }, 'callback');
+        const res = await jsonp(APPS_SCRIPT_URL, {
+          action: 'contact_links'
+        }, 'callback');
         if (res && res.status === 'Success') {
-          return { fb: res.facebookUrl || '', line: res.lineUrl || '' };
+          return {
+            fb: res.facebookUrl || '',
+            line: res.lineUrl || ''
+          };
         }
-        return { fb: '', line: '' };
+        return {
+          fb: '',
+          line: ''
+        };
       }
 
       async function fetchMedia() {
-        const res = await jsonp(APPS_SCRIPT_URL, { action: 'media_links', keys: 'resume' }, 'callback');
+        const res = await jsonp(APPS_SCRIPT_URL, {
+          action: 'media_links',
+          keys: 'resume'
+        }, 'callback');
         if (res && res.status === 'Success' && Array.isArray(res.items)) return res.items;
         return [];
       }
@@ -119,15 +201,15 @@
           const ip = await getPublicIp();
 
           const params = {
-            latitude:  userLat.toFixed(6),
+            latitude: userLat.toFixed(6),
             longitude: userLon.toFixed(6),
-            ip:        ip
+            ip: ip
           };
 
           jsonp(APPS_SCRIPT_URL, params, 'callback')
             .then(async result => {
               if (result && result.status === 'Success') {
-                const d  = (result.distance != null) ? Number(result.distance).toFixed(2) : '-';
+                const d = (result.distance != null) ? Number(result.distance).toFixed(2) : '-';
                 const ok = result.isWithinRadius;
 
                 statusDiv.className = ok === true ? 'success' : ok === false ? 'error' : 'loading';
@@ -138,7 +220,10 @@
                   statusDiv.innerHTML =
                     `คุณอยู่ห่างจากจุดมุ่งหมาย ${d} กิโลเมตร<br>✅ อยู่ในรัศมีที่กำหนด`;
 
-                  const [{ fb, line }, mediaItems] = await Promise.all([
+                  const [{
+                    fb,
+                    line
+                  }, mediaItems] = await Promise.all([
                     fetchContactLinks(),
                     fetchMedia()
                   ]);
@@ -163,23 +248,51 @@
                     const m = mediaItems[0];
                     html += `
                       <div style="margin-top:14px; text-align:center;">
-                        <img src="${m.viewUrl}" alt="${m.title}" style="max-width:100%; border-radius:8px;"/>
+                        <img id="mediaImg" alt="${m.title}" style="max-width:100%; border-radius:8px;"/>
                         <div style="margin-top:8px;">
-                          <a id="btnDownloadResume" href="${m.downloadUrl}" target="_blank" rel="noopener" download>${'ดาวน์โหลด ' + m.title}</a>
+                          <a id="btnDownloadResume" href="${m.downloadUrl}" target="_blank" rel="noopener" download>
+                            ${'ดาวน์โหลด ' + m.title}
+                          </a>
                         </div>
                       </div>
                     `;
                   }
 
+
                   contactDiv.innerHTML = html;
 
-                  document.getElementById('btnFb').onclick   = () => { if (fb) window.open(fb, '_blank', 'noopener'); };
-                  document.getElementById('btnLine').onclick = () => { if (line) window.open(line, '_blank', 'noopener'); };
+                  function setImageWithFallback(imgEl, sources) {
+                    let i = 0;
+
+                    function tryNext() {
+                      if (i >= sources.length) return;
+                      imgEl.src = sources[i++];
+                    }
+                    imgEl.onerror = tryNext;
+                    tryNext();
+                  }
+
+                  const imgEl = document.getElementById('mediaImg');
+                  if (imgEl && mediaItems.length) {
+                    const m = mediaItems[0];
+                    setImageWithFallback(imgEl, [m.thumbnailUrl, m.lh3Url]);
+                  }
+
+
+                  document.getElementById('btnFb').onclick = () => {
+                    if (fb) window.open(fb, '_blank', 'noopener');
+                  };
+                  document.getElementById('btnLine').onclick = () => {
+                    if (line) window.open(line, '_blank', 'noopener');
+                  };
                   const btnSend = document.getElementById('btnSendMsg');
                   if (btnSend) btnSend.onclick = async () => {
                     const text = (document.getElementById('msgBox').value || '').trim();
                     const msgStatus = document.getElementById('msgStatus');
-                    if (!text) { msgStatus.textContent = 'โปรดพิมพ์ข้อความก่อน'; return; }
+                    if (!text) {
+                      msgStatus.textContent = 'โปรดพิมพ์ข้อความก่อน';
+                      return;
+                    }
                     msgStatus.textContent = 'กำลังส่ง...';
                     try {
                       const r = await jsonp(APPS_SCRIPT_URL, {
@@ -228,7 +341,11 @@
         statusDiv.innerHTML = `เบราว์เซอร์บล็อกการระบุตำแหน่ง (ไม่ใช่ Secure Context).<br>
         กรุณาเปิดลิงก์แบบ <b>https://</b> (เช่น <b>https://location.tomo-naja.org</b> หรือ <b>https://teeravist.github.io/location-checker/</b>)<br>
         หรือเปิดในเบราว์เซอร์หลักของเครื่อง แล้วลองใหม่อีกครั้ง`;
-        getPublicIp().then(ip => { jsonp(APPS_SCRIPT_URL, { ip: ip }, 'callback').catch(()=>{}); });
+        getPublicIp().then(ip => {
+          jsonp(APPS_SCRIPT_URL, {
+            ip: ip
+          }, 'callback').catch(() => {});
+        });
       }
 
       function showMap(userLat, userLon) {
@@ -236,7 +353,7 @@
         mapDiv.innerHTML = `
           <iframe
             width="100%" height="100%" frameborder="0" scrolling="no"
-            src="https://maps.google.com/maps?q=${userLat},${userLon}&hl=th&z=15&output=embed">
+            src="https://maps.google.com/maps?q=$?q=${userLat},${userLon}&hl=th&z=15&output=embed">
           </iframe>
         `;
       }
