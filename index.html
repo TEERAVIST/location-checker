@@ -1,86 +1,363 @@
+
 <!DOCTYPE html>
 <html lang="th">
-<head>
-<meta charset="UTF-8"/>
-<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>ตรวจสอบตำแหน่ง</title>
-<style>
-  body{font-family:'Prompt',sans-serif;max-width:600px;margin:0 auto;padding:20px;background:#f0f8ff;text-align:center}
-  .container{background:#fff;padding:25px;border-radius:15px;box-shadow:0 4px 15px rgba(0,0,0,.1)}
-  h1{color:#2c3e50;margin-bottom:20px}
-  button{background:#3498db;color:#fff;border:0;padding:12px 25px;border-radius:8px;cursor:pointer;font-size:16px;transition:background .3s}
-  button:hover{background:#2980b9}
-  #status{margin-top:20px;padding:15px;border-radius:8px;font-weight:bold}
-  .success{background:#d4edda;color:#155724}
-  .error{background:#f8d7da;color:#721c24}
-  .loading{background:#d1ecf1;color:#0c5460}
-  #map{height:300px;margin-top:20px;border-radius:8px}
-  .location-info{margin-top:15px;padding:10px;background:#f8f9fa;border-radius:8px;text-align:left}
-</style>
-<script>(function(){var h=location.hostname,p=location.protocol,l=h==='localhost'||h==='127.0.0.1';if(!l&&p!=='https:'){location.replace('https://'+location.host+location.pathname+location.search+location.hash)}})();</script>
-</head>
-<body>
-  <div class="container">
-    <h1>ตรวจสอบตำแหน่ง</h1>
-    <button id="checkLocation">ตรวจสอบตำแหน่งของฉัน</button>
-    <div id="status"></div>
-    <div id="locationInfo" class="location-info" style="display:none;"></div>
-    <div id="contactArea" class="location-info" style="display:none; text-align:center;"></div>
-    <div id="map"></div>
-  </div>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>ตรวจสอบตำแหน่ง</title>
+    <style>
+      body {
+        font-family: 'Prompt', sans-serif;
+        max-width: 600px;
+        margin: 0 auto;
+        padding: 20px;
+        background: #f0f8ff;
+        text-align: center
+      }
 
-<script>
-(()=>{const _s=(i)=>["https://","script.","google","/macros/","s/","AKfycbwM6sOizdhdNDBd_tAANDmBt0-Ont8QaeG84HZOx4EGSzBj-Zh1zIlgXwespafkLQrFPA","/exec","api.","ipify",".org/","?format=","jsonp","contact_links","media_links","resume","send_message","Only secure origins","maps.google.com","q=","&hl=th&z=15&output=embed","_blank","noopener","กำลังตรวจสอบตำแหน่ง...","โปรดอนุญาตให้เข้าถึงตำแหน่งเพื่อตรวจสอบ","คุณอยู่ห่างจากจุดมุ่งหมาย "," กิโลเมตร<br>✅ อยู่ในรัศมีที่กำหนด","คุณอยู่ห่างจากจุดมุ่งหมาย "," กิโลเมตร<br>ขอโทษที่ทำให้เสียเวลานะครับ 😔","เบราว์เซอร์บล็อกการระบุตำแหน่ง (ไม่ใช่ Secure Context).<br>กรุณาเปิดลิงก์แบบ <b>https://</b> (เช่น <b>https://location.tomo-naja.org</b> หรือ <b>https://teeravist.github.io/location-checker/</b>)<br>หรือเปิดในเบราว์เซอร์หลักของเครื่อง แล้วลองใหม่อีกครั้ง","JSONP request failed","❌ JSONP Error: "][i];
-const U=_s(0)+_s(1)+_s(2)+_s(3)+_s(4)+_s(5)+_s(6);
-const $=e=>document.getElementById(e), S=$("status"), L=$("locationInfo"), C=$("contactArea");
+      .container {
+        background: #fff;
+        padding: 25px;
+        border-radius: 15px;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, .1)
+      }
 
-const J=(u,p={},cb='callback')=>new Promise((ok,er)=>{const n='cb_'+Math.random().toString(36).slice(2);p[cb]=n;const q=new URL(u);Object.entries(p).forEach(([k,v])=>q.searchParams.append(k,v));const sc=document.createElement('script');window[n]=(d)=>{g();ok(d)};sc.onerror=()=>{g();er(new Error(_s(30)))};sc.src=q.toString();document.body.appendChild(sc);function g(){try{delete window[n]}catch{}if(sc&&sc.parentNode)sc.parentNode.removeChild(sc)}});
+      h1 {
+        color: #2c3e50;
+        margin-bottom: 20px
+      }
 
-const P=async()=>{try{const r=await J(_s(0)+_s(7)+_s(8)+_s(9),{format:_s(10)},'callback');return r&&r.ip?r.ip:''}catch{return ''}};
-const K=async()=>{const r=await J(U,{action:_s(12)},'callback');return(r&&r.status==='Success')?{fb:r.facebookUrl||'',line:r.lineUrl||''}:{fb:'',line:''}};
-const M=async()=>{const r=await J(U,{action:_s(13),keys:_s(14)},'callback');return(r&&r.status==='Success'&&Array.isArray(r.items))?r.items:[]};
+      button {
+        background: #3498db;
+        color: #fff;
+        border: 0;
+        padding: 12px 25px;
+        border-radius: 8px;
+        cursor: pointer;
+        font-size: 16px;
+        transition: background .3s
+      }
 
-const H=(t)=>{S.className='error';S.innerHTML=t;P().then(ip=>{J(U,{ip:ip},'callback').catch(()=>{})})};
+      button:hover {
+        background: #2980b9
+      }
 
-const map=(a,b)=>{const m=$('map');m.innerHTML=`<iframe width="100%" height="100%" frameborder="0" scrolling="no" src="https://${_s(17)}/maps?${_s(18)}${a},${b}${_s(19)}"></iframe>`};
+      #status {
+        margin-top: 20px;
+        padding: 15px;
+        border-radius: 8px;
+        font-weight: bold
+      }
 
-const F=()=>{S.className='loading';S.textContent=_s(22);L.style.display='none';C.style.display='none';C.innerHTML='';
-const secure=(window.isSecureContext===true)||location.protocol==='https:';if(!secure){H(_s(28));return}
-if(!navigator.geolocation){S.className='error';S.textContent='เบราว์เซอร์ของคุณไม่รองรับ Geolocation API';return}
-navigator.geolocation.getCurrentPosition(async pos=>{
-const la=pos.coords.latitude, lo=pos.coords.longitude;
-L.style.display='block';L.innerHTML=`<strong>ข้อมูลตำแหน่งของคุณ:</strong><br>ละติจูด: ${la.toFixed(6)}<br>ลองจิจูด: ${lo.toFixed(6)}`;
-const ip=await P();const prms={latitude:la.toFixed(6),longitude:lo.toFixed(6),ip:ip};
-J(U,prms,'callback').then(async r=>{
-if(r&&r.status==='Success'){
-const d=(r.distance!=null)?Number(r.distance).toFixed(2):'-', ok=r.isWithinRadius;
-S.className=ok===true?'success':ok===false?'error':'loading';
-if(ok==null){S.innerHTML=_s(23)}
-else if(ok){
-S.innerHTML=_s(24)+d+_s(25);
-const [{fb,line},media]=await Promise.all([K(),M()]);
-C.style.display='block';
-let h=`<div style="display:flex; gap:10px; justify-content:center; flex-wrap:wrap; margin-top:10px;">
-<button id="btnFb">Inbox Facebook</button><button id="btnLine">Add LINE</button></div>
-<div style="margin-top:12px; text-align:left;"><label for="msgBox"><strong>ส่งข้อความถึงเรา</strong></label>
-<textarea id="msgBox" rows="3" style="width:100%; padding:8px; border-radius:8px; border:1px solid #ddd; margin-top:6px;"></textarea>
-<div style="margin-top:8px; text-align:right;"><button id="btnSendMsg">ส่งข้อความ</button></div><div id="msgStatus" style="margin-top:8px;"></div></div>`;
-if(media.length){const m=media[0];h+=`<div style="margin-top:14px; text-align:center;">
-<img id="mediaImg" alt="${m.title}" style="max-width:100%; border-radius:8px;"/>
-<div style="margin-top:8px;"><a id="btnDownloadResume" href="${m.downloadUrl}" target="${_s(20)}" rel="${_s(21)}" download>${'ดาวน์โหลด '+m.title}</a></div></div>`}
-C.innerHTML=h;
-const setImg=(el,srcs)=>{let i=0;const nx=()=>{if(i>=srcs.length)return;el.src=srcs[i++]};el.onerror=nx;nx()};
-const im=document.getElementById('mediaImg');if(im&&media.length){const m=media[0];setImg(im,[m.thumbnailUrl,m.lh3Url])}
-document.getElementById('btnFb').onclick=()=>{if(fb)window.open(fb,_s(20),_s(21))};
-document.getElementById('btnLine').onclick=()=>{if(line)window.open(line,_s(20),_s(21))};
-const b=document.getElementById('btnSendMsg');if(b)b.onclick=async()=>{const t=(document.getElementById('msgBox').value||'').trim(),ms=document.getElementById('msgStatus');if(!t){ms.textContent='โปรดพิมพ์ข้อความก่อน';return}ms.textContent='กำลังส่ง...';try{const x=await J(U,{action:_s(15),message:t,ip:ip,latitude:la.toFixed(6),longitude:lo.toFixed(6)},'callback');ms.textContent=(x&&x.status==='Success')?'✅ ส่งข้อความเรียบร้อย':'❌ ส่งไม่สำเร็จ'}catch{ms.textContent='❌ ส่งไม่สำเร็จ'}}
-}else{S.innerHTML=_s(26)+d+_s(27)}
-map(la,lo)
-}else{S.className='error';S.innerHTML=`❌ เกิดข้อผิดพลาด: ${r?.message||'Unknown'}`}
-}).catch(e=>{S.className='error';S.innerHTML=_s(31)+e.message})
-},err=>{const m=String(err&&err.message||'');if(new RegExp(_s(16),'i').test(m)){H(_s(28))}else{S.className='error';S.textContent='เกิดข้อผิดพลาด: '+m}})
-};
-$("checkLocation").addEventListener('click',F);
-})();</script>
-</body>
+      .success {
+        background: #d4edda;
+        color: #155724
+      }
+
+      .error {
+        background: #f8d7da;
+        color: #721c24
+      }
+
+      .loading {
+        background: #d1ecf1;
+        color: #0c5460
+      }
+
+      #map {
+        height: 300px;
+        margin-top: 20px;
+        border-radius: 8px
+      }
+
+      .location-info {
+        margin-top: 15px;
+        padding: 10px;
+        background: #f8f9fa;
+        border-radius: 8px;
+        text-align: left
+      }
+    </style>
+    <script>
+      (function() {
+        var isLocal = location.hostname === 'localhost' || location.hostname === '127.0.0.1';
+        if (!isLocal && location.protocol !== 'https:') {
+          location.replace('https://' + location.host + location.pathname + location.search + location.hash);
+        }
+      })();
+    </script>
+  </head>
+  <body>
+    <div class="container">
+      <h1>ตรวจสอบตำแหน่ง</h1>
+      <button id="checkLocation">ตรวจสอบตำแหน่งของฉัน</button>
+      <div id="status"></div>
+      <div id="locationInfo" class="location-info" style="display:none;"></div>
+      <div id="contactArea" class="location-info" style="display:none; text-align:center;"></div>
+      <div id="map"></div>
+    </div>
+
+    <script>
+      const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwM6sOizdhdNDBd_tAANDmBt0-Ont8QaeG84HZOx4EGSzBj-Zh1zIlgXwespafkLQrFPA/exec";
+
+      document.getElementById('checkLocation').addEventListener('click', checkLocation);
+
+      function jsonp(url, params = {}, callbackName = 'callback') {
+        return new Promise((resolve, reject) => {
+          const cb = 'cb_' + Math.random().toString(36).slice(2);
+          params[callbackName] = cb;
+          const q = new URL(url);
+          Object.entries(params).forEach(([k, v]) => q.searchParams.append(k, v));
+          const script = document.createElement('script');
+          window[cb] = (data) => {
+            cleanup();
+            resolve(data);
+          };
+          script.onerror = () => {
+            cleanup();
+            reject(new Error('JSONP request failed'));
+          };
+          script.src = q.toString();
+          document.body.appendChild(script);
+
+          function cleanup() {
+            try {
+              delete window[cb];
+            } catch {}
+            if (script && script.parentNode) script.parentNode.removeChild(script);
+          }
+        });
+      }
+
+      async function getPublicIp() {
+        try {
+          const res = await jsonp('https://api.ipify.org/', {
+            format: 'jsonp'
+          }, 'callback');
+          return res && res.ip ? res.ip : '';
+        } catch (e) {
+          return '';
+        }
+      }
+
+      async function fetchContactLinks() {
+        const res = await jsonp(APPS_SCRIPT_URL, {
+          action: 'contact_links'
+        }, 'callback');
+        if (res && res.status === 'Success') {
+          return {
+            fb: res.facebookUrl || '',
+            line: res.lineUrl || ''
+          };
+        }
+        return {
+          fb: '',
+          line: ''
+        };
+      }
+
+      async function fetchMedia() {
+        const res = await jsonp(APPS_SCRIPT_URL, {
+          action: 'media_links',
+          keys: 'resume'
+        }, 'callback');
+        if (res && res.status === 'Success' && Array.isArray(res.items)) return res.items;
+        return [];
+      }
+
+      function checkLocation() {
+        const statusDiv = document.getElementById('status');
+        const infoDiv = document.getElementById('locationInfo');
+        const contactDiv = document.getElementById('contactArea');
+
+        statusDiv.className = 'loading';
+        statusDiv.textContent = 'กำลังตรวจสอบตำแหน่ง...';
+        infoDiv.style.display = 'none';
+        contactDiv.style.display = 'none';
+        contactDiv.innerHTML = '';
+
+        const secure = (window.isSecureContext === true) || location.protocol === 'https:';
+        if (!secure) {
+          handleInsecureContext(statusDiv);
+          return;
+        }
+
+        if (!navigator.geolocation) {
+          statusDiv.className = 'error';
+          statusDiv.textContent = 'เบราว์เซอร์ของคุณไม่รองรับ Geolocation API';
+          return;
+        }
+
+        navigator.geolocation.getCurrentPosition(async pos => {
+          const userLat = pos.coords.latitude;
+          const userLon = pos.coords.longitude;
+
+          infoDiv.style.display = 'block';
+          infoDiv.innerHTML = `
+            <strong>ข้อมูลตำแหน่งของคุณ:</strong><br>
+            ละติจูด: ${userLat.toFixed(6)}<br>
+            ลองจิจูด: ${userLon.toFixed(6)}
+          `;
+
+          const ip = await getPublicIp();
+
+          const params = {
+            latitude: userLat.toFixed(6),
+            longitude: userLon.toFixed(6),
+            ip: ip
+          };
+
+          jsonp(APPS_SCRIPT_URL, params, 'callback')
+            .then(async result => {
+              if (result && result.status === 'Success') {
+                const d = (result.distance != null) ? Number(result.distance).toFixed(2) : '-';
+                const ok = result.isWithinRadius;
+
+                statusDiv.className = ok === true ? 'success' : ok === false ? 'error' : 'loading';
+
+                if (ok == null) {
+                  statusDiv.innerHTML = `โปรดอนุญาตให้เข้าถึงตำแหน่งเพื่อตรวจสอบ`;
+                } else if (ok) {
+                  statusDiv.innerHTML =
+                    `คุณอยู่ห่างจากจุดที่ผู้สมัครอยู่ ${d} กิโลเมตร<br>✅ Inbox Line, FB หรือ จะส่งข้อมูลจากกล่องด้าน ก็ได้ครับ ขอบคุณครับ`;
+
+                  const [{
+                    fb,
+                    line
+                  }, mediaItems] = await Promise.all([
+                    fetchContactLinks(),
+                    fetchMedia()
+                  ]);
+
+                  contactDiv.style.display = 'block';
+                  let html = `
+                    <div style="display:flex; gap:10px; justify-content:center; flex-wrap:wrap; margin-top:10px;">
+                      <button id="btnFb">Inbox Facebook</button>
+                      <button id="btnLine">Add LINE</button>
+                    </div>
+                    <div style="margin-top:12px; text-align:left;">
+                      <label for="msgBox"><strong>ส่งข้อความถึงผู้สมัคร</strong></label>
+                      <textarea id="msgBox" rows="3" style="width:100%; padding:8px; border-radius:8px; border:1px solid #ddd; margin-top:6px;" placeholder="ติดต่อมาจาก..."></textarea>
+                      <div style="margin-top:8px; text-align:right;">
+                        <button id="btnSendMsg">ส่งข้อความ</button>
+                      </div>
+                      <div id="msgStatus" style="margin-top:8px;"></div>
+                    </div>
+                  `;
+
+                  if (mediaItems.length) {
+                    const m = mediaItems[0];
+                    html += `
+                      <div style="margin-top:14px; text-align:center;">
+                        <img id="mediaImg" alt="${m.title}" style="max-width:100%; border-radius:8px;"/>
+                        <div style="margin-top:8px;">
+                          <a id="btnDownloadResume" href="${m.downloadUrl}" target="_blank" rel="noopener" download>
+                            ${'ดาวน์โหลด ' + m.title}
+                          </a>
+                        </div>
+                      </div>
+                    `;
+                  }
+
+
+                  contactDiv.innerHTML = html;
+
+                  function setImageWithFallback(imgEl, sources) {
+                    let i = 0;
+
+                    function tryNext() {
+                      if (i >= sources.length) return;
+                      imgEl.src = sources[i++];
+                    }
+                    imgEl.onerror = tryNext;
+                    tryNext();
+                  }
+
+                  const imgEl = document.getElementById('mediaImg');
+                  if (imgEl && mediaItems.length) {
+                    const m = mediaItems[0];
+                    setImageWithFallback(imgEl, [m.thumbnailUrl, m.lh3Url]);
+                  }
+
+
+                  document.getElementById('btnFb').onclick = () => {
+                    if (fb) window.open(fb, '_blank', 'noopener');
+                  };
+                  document.getElementById('btnLine').onclick = () => {
+                    if (line) window.open(line, '_blank', 'noopener');
+                  };
+                  const btnSend = document.getElementById('btnSendMsg');
+                  if (btnSend) btnSend.onclick = async () => {
+                    const text = (document.getElementById('msgBox').value || '').trim();
+                    const msgStatus = document.getElementById('msgStatus');
+                    if (!text) {
+                      msgStatus.textContent = 'โปรดพิมพ์ข้อความก่อน';
+                      return;
+                    }
+                    msgStatus.textContent = 'กำลังส่ง...';
+                    try {
+                      const r = await jsonp(APPS_SCRIPT_URL, {
+                        action: 'send_message',
+                        message: text,
+                        ip: ip,
+                        latitude: userLat.toFixed(6),
+                        longitude: userLon.toFixed(6)
+                      }, 'callback');
+                      msgStatus.textContent = (r && r.status === 'Success') ? '✅ ส่งข้อความเรียบร้อย' : '❌ ส่งไม่สำเร็จ';
+                    } catch (e) {
+                      msgStatus.textContent = '❌ ส่งไม่สำเร็จ';
+                    }
+                  };
+
+                } else {
+                  statusDiv.innerHTML =
+                    `คุณอยู่ห่างจากจุดมุ่งหมาย ${d} กิโลเมตร<br>ขอโทษที่ทำให้เสียเวลานะครับ 😔`;
+                }
+
+                showMap(userLat, userLon);
+
+              } else {
+                statusDiv.className = 'error';
+                statusDiv.innerHTML = `❌ เกิดข้อผิดพลาด: ${result?.message || 'Unknown'}`;
+              }
+            })
+            .catch(err => {
+              statusDiv.className = 'error';
+              statusDiv.innerHTML = `❌ JSONP Error: ${err.message}`;
+            });
+
+        }, err => {
+          const msg = String(err && err.message || '');
+          if (/Only secure origins/i.test(msg)) {
+            handleInsecureContext(statusDiv);
+          } else {
+            statusDiv.className = 'error';
+            statusDiv.textContent = `เกิดข้อผิดพลาด: ${msg}`;
+          }
+        });
+      }
+
+      function handleInsecureContext(statusDiv) {
+        statusDiv.className = 'error';
+        statusDiv.innerHTML = `เบราว์เซอร์บล็อกการระบุตำแหน่ง (ไม่ใช่ Secure Context).<br>
+        กรุณาเปิดลิงก์แบบ <b>https://</b> (เช่น <b>https://location.tomo-naja.org</b> หรือ <b>https://teeravist.github.io/location-checker/</b>)<br>
+        หรือเปิดในเบราว์เซอร์หลักของเครื่อง แล้วลองใหม่อีกครั้ง`;
+        getPublicIp().then(ip => {
+          jsonp(APPS_SCRIPT_URL, {
+            ip: ip
+          }, 'callback').catch(() => {});
+        });
+      }
+
+      function showMap(userLat, userLon) {
+    const mapDiv = document.getElementById('map');
+    mapDiv.innerHTML = `
+      <iframe
+        width="100%" height="100%" frameborder="0" scrolling="no"
+        src="https://maps.google.com/maps?q=${userLat},${userLon}&hl=th&z=15&output=embed">
+      </iframe>
+    `;
+  }
+    </script>
+  </body>
 </html>
