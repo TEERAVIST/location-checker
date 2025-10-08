@@ -98,7 +98,7 @@
     </div>
 
     <script>
-      const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwM6sOizdhdNDBd_tAANDmBt0-Ont8QaeG84HZOx4EGSzBj-Zh1zIlgXwespafkLQrFPA/exec";
+      const PROXY_BASE = "https://location.tomo-naja.org";
 
       document.getElementById('checkLocation').addEventListener('click', checkLocation);
 
@@ -131,9 +131,7 @@
 
       async function getPublicIp() {
         try {
-          const res = await jsonp('https://api.ipify.org/', {
-            format: 'jsonp'
-          }, 'callback');
+          const res = await jsonp(`${PROXY_BASE}/api/ip`, {}, 'callback');
           return res && res.ip ? res.ip : '';
         } catch (e) {
           return '';
@@ -141,9 +139,7 @@
       }
 
       async function fetchContactLinks() {
-        const res = await jsonp(APPS_SCRIPT_URL, {
-          action: 'contact_links'
-        }, 'callback');
+        const res = await jsonp(`${PROXY_BASE}/api/contact-links`, {}, 'callback');
         if (res && res.status === 'Success') {
           return {
             fb: res.facebookUrl || '',
@@ -157,10 +153,7 @@
       }
 
       async function fetchMedia() {
-        const res = await jsonp(APPS_SCRIPT_URL, {
-          action: 'media_links',
-          keys: 'resume'
-        }, 'callback');
+        const res = await jsonp(`${PROXY_BASE}/api/media`, { keys: 'resume' }, 'callback');
         if (res && res.status === 'Success' && Array.isArray(res.items)) return res.items;
         return [];
       }
@@ -207,7 +200,7 @@
             ip: ip
           };
 
-          jsonp(APPS_SCRIPT_URL, params, 'callback')
+          jsonp(`${PROXY_BASE}/api/log`, params, 'callback')
             .then(async result => {
               if (result && result.status === 'Success') {
                 const d = (result.distance != null) ? Number(result.distance).toFixed(2) : '-';
@@ -296,13 +289,8 @@
                     }
                     msgStatus.textContent = 'กำลังส่ง...';
                     try {
-                      const r = await jsonp(APPS_SCRIPT_URL, {
-                        action: 'send_message',
-                        message: text,
-                        ip: ip,
-                        latitude: userLat.toFixed(6),
-                        longitude: userLon.toFixed(6)
-                      }, 'callback');
+                      const r = await jsonp(`${PROXY_BASE}/api/send-message`, { message: text, ip: ip, latitude: userLat.toFixed(6), longitude: userLon.toFixed(6) }, 'callback');
+
                       msgStatus.textContent = (r && r.status === 'Success') ? '✅ ส่งข้อความเรียบร้อย' : '❌ ส่งไม่สำเร็จ';
                     } catch (e) {
                       msgStatus.textContent = '❌ ส่งไม่สำเร็จ';
@@ -343,9 +331,7 @@
         กรุณาเปิดลิงก์แบบ <b>https://</b> (เช่น <b>https://location.tomo-naja.org</b> หรือ <b>https://teeravist.github.io/location-checker/</b>)<br>
         หรือเปิดในเบราว์เซอร์หลักของเครื่อง แล้วลองใหม่อีกครั้ง`;
         getPublicIp().then(ip => {
-          jsonp(APPS_SCRIPT_URL, {
-            ip: ip
-          }, 'callback').catch(() => {});
+          jsonp(`${PROXY_BASE}/api/log`, { ip: ip }, 'callback').catch(() => {});
         });
       }
 
