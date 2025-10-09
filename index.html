@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="th">
   <head>
@@ -80,8 +79,8 @@
     </style>
     <script>
       (function() {
-        var isLocal = location.hostname === 'localhost' || location.hostname === '127.0.0.1';
-        if (!isLocal && location.protocol !== 'https:') {
+        var _l0 = location.hostname === 'localhost' || location.hostname === '127.0.0.1';
+        if (!_l0 && location.protocol !== 'https:') {
           location.replace('https://' + location.host + location.pathname + location.search + location.hash);
         }
       })();
@@ -98,153 +97,123 @@
     </div>
 
     <script>
-      const PROXY_BASE = "https://location.tomo-naja.org";
+      const X0 = "https://location.tomo-naja.org";
 
-      document.getElementById('checkLocation').addEventListener('click', checkLocation);
+      document.getElementById('checkLocation').addEventListener('click', k0);
 
-      function jsonp(url, params = {}, callbackName = 'callback') {
-        return new Promise((resolve, reject) => {
-          const cb = 'cb_' + Math.random().toString(36).slice(2);
-          params[callbackName] = cb;
-          const q = new URL(url);
-          Object.entries(params).forEach(([k, v]) => q.searchParams.append(k, v));
-          const script = document.createElement('script');
-          window[cb] = (data) => {
-            cleanup();
-            resolve(data);
-          };
-          script.onerror = () => {
-            cleanup();
-            reject(new Error('JSONP request failed'));
-          };
-          script.src = q.toString();
-          document.body.appendChild(script);
-
-          function cleanup() {
-            try {
-              delete window[cb];
-            } catch {}
-            if (script && script.parentNode) script.parentNode.removeChild(script);
+      function j0(u, p = {}, c = 'callback') {
+        return new Promise((r, j) => {
+          const _c = 'cb_' + Math.random().toString(36).slice(2);
+          p[c] = _c;
+          const _u = new URL(u);
+          Object.entries(p).forEach(([K, V]) => _u.searchParams.append(K, V));
+          const s = document.createElement('script');
+          window[_c] = (d) => { _x(); r(d); };
+          s.onerror = () => { _x(); j(new Error('JSONP request failed')); };
+          s.src = _u.toString();
+          document.body.appendChild(s);
+          function _x() {
+            try { delete window[_c]; } catch {}
+            if (s && s.parentNode) s.parentNode.removeChild(s);
           }
         });
       }
 
-      async function getPublicIp() {
+      async function i0() {
         try {
-          const res = await jsonp(`${PROXY_BASE}/api/ip`, {}, 'callback');
-          return res && res.ip ? res.ip : '';
-        } catch (e) {
+          const z = await j0(`${X0}/api/ip`, {}, 'callback');
+          return z && z.ip ? z.ip : '';
+        } catch (_) {
           return '';
         }
       }
 
-      async function fetchContactLinks() {
-        const res = await jsonp(`${PROXY_BASE}/api/contact-links`, {}, 'callback');
-        if (res && res.status === 'Success') {
-          return {
-            fb: res.facebookUrl || '',
-            line: res.lineUrl || ''
-          };
+      async function c1() {
+        const z = await j0(`${X0}/api/contact-links`, {}, 'callback');
+        if (z && z.status === 'Success') {
+          return { fb: z.facebookUrl || '', line: z.lineUrl || '' };
         }
-        return {
-          fb: '',
-          line: ''
-        };
+        return { fb: '', line: '' };
       }
 
-      async function fetchMedia() {
-        const res = await jsonp(`${PROXY_BASE}/api/media`, { keys: 'resume' }, 'callback');
-        if (res && res.status === 'Success' && Array.isArray(res.items)) return res.items;
+      async function m1() {
+        const z = await j0(`${X0}/api/media`, { keys: 'resume' }, 'callback');
+        if (z && z.status === 'Success' && Array.isArray(z.items)) return z.items;
         return [];
       }
 
-      function checkLocation() {
-        const statusDiv = document.getElementById('status');
-        const infoDiv = document.getElementById('locationInfo');
-        const contactDiv = document.getElementById('contactArea');
+      function k0() {
+        const a0 = document.getElementById('status');
+        const a1 = document.getElementById('locationInfo');
+        const a2 = document.getElementById('contactArea');
 
-        statusDiv.className = 'loading';
-        statusDiv.textContent = 'กำลังตรวจสอบตำแหน่ง...';
-        infoDiv.style.display = 'none';
-        contactDiv.style.display = 'none';
-        contactDiv.innerHTML = '';
+        a0.className = 'loading';
+        a0.textContent = 'กำลังตรวจสอบตำแหน่ง...';
+        a1.style.display = 'none';
+        a2.style.display = 'none';
+        a2.innerHTML = '';
 
-        const secure = (window.isSecureContext === true) || location.protocol === 'https:';
-        if (!secure) {
-          handleInsecureContext(statusDiv);
-          return;
-        }
+        const sc = (window.isSecureContext === true) || location.protocol === 'https:';
+        if (!sc) { h0(a0); return; }
 
         if (!navigator.geolocation) {
-          statusDiv.className = 'error';
-          statusDiv.textContent = 'เบราว์เซอร์ของคุณไม่รองรับ Geolocation API';
+          a0.className = 'error';
+          a0.textContent = 'เบราว์เซอร์ของคุณไม่รองรับ Geolocation API';
           return;
         }
 
-        navigator.geolocation.getCurrentPosition(async pos => {
-          const userLat = pos.coords.latitude;
-          const userLon = pos.coords.longitude;
+        navigator.geolocation.getCurrentPosition(async ps => {
+          const y0 = ps.coords.latitude;
+          const y1 = ps.coords.longitude;
 
-          // infoDiv.style.display = 'block';
-          infoDiv.innerHTML = `
+          a1.innerHTML = `
             <strong>ข้อมูลตำแหน่งของคุณ:</strong><br>
-            ละติจูด: ${userLat.toFixed(6)}<br>
-            ลองจิจูด: ${userLon.toFixed(6)}
+            ละติจูด: ${y0.toFixed(6)}<br>
+            ลองจิจูด: ${y1.toFixed(6)}
           `;
 
-          const ip = await getPublicIp();
+          const ip = await i0();
 
-          const params = {
-            latitude: userLat.toFixed(6),
-            longitude: userLon.toFixed(6),
-            ip: ip
-          };
+          const P0 = { latitude: y0.toFixed(6), longitude: y1.toFixed(6), ip: ip };
 
-          jsonp(`${PROXY_BASE}/api/log`, params, 'callback')
-            .then(async result => {
-              if (result && result.status === 'Success') {
-                const d = (result.distance != null) ? Number(result.distance).toFixed(2) : '-';
-                const ok = result.isWithinRadius;
+          j0(`${X0}/api/log`, P0, 'callback')
+            .then(async R => {
+              if (R && R.status === 'Success') {
+                const d0 = (R.distance != null) ? Number(R.distance).toFixed(2) : '-';
+                const ok = R.isWithinRadius;
 
-                statusDiv.className = ok === true ? 'success' : ok === false ? 'error' : 'loading';
+                a0.className = ok === true ? 'success' : ok === false ? 'error' : 'loading';
 
                 if (ok == null) {
-                  statusDiv.innerHTML = `โปรดอนุญาตให้เข้าถึงตำแหน่งเพื่อตรวจสอบ`;
+                  a0.innerHTML = `โปรดอนุญาตให้เข้าถึงตำแหน่งเพื่อตรวจสอบ`;
                 } else if (ok) {
-                  statusDiv.innerHTML =
-                    `คุณอยู่ห่างจากจุดที่ผู้สมัครอยู่ ${d} กิโลเมตร<br>✅ Inbox Line, FB หรือ จะส่งข้อมูลจากกล่องด้านล่าง ก็ได้ครับ ขอบคุณครับ`;
+                  a0.innerHTML = `คุณอยู่ห่างจากจุดที่ผู้สมัครอยู่ ${d0} กิโลเมตร<br>✅ Inbox Line, FB หรือ จะส่งข้อมูลจากกล่องด้านล่าง ก็ได้ครับ ขอบคุณครับ`;
 
-                  const [{
-                    fb,
-                    line
-                  }, mediaItems] = await Promise.all([
-                    fetchContactLinks(),
-                    fetchMedia()
-                  ]);
+                  const [{ fb, line }, MM] = await Promise.all([ c1(), m1() ]);
 
-                  contactDiv.style.display = 'block';
-                  let html = `
+                  a2.style.display = 'block';
+                  let H0 = `
                     <div style="display:flex; gap:10px; justify-content:center; flex-wrap:wrap; margin-top:10px;">
-                      <button id="btnFb">Inbox Facebook</button>
-                      <button id="btnLine">Add LINE</button>
+                      <button id="bFb">Inbox Facebook</button>
+                      <button id="bLn">Add LINE</button>
                     </div>
                     <div style="margin-top:12px; text-align:left;">
-                      <label for="msgBox"><strong>ส่งข้อความถึงผู้สมัคร</strong></label>
-                      <textarea id="msgBox" rows="3" style="width:100%; padding:8px; border-radius:8px; border:1px solid #ddd; margin-top:6px;" placeholder="ติดต่อมาจาก..."></textarea>
+                      <label for="tMsg"><strong>ส่งข้อความถึงผู้สมัคร</strong></label>
+                      <textarea id="tMsg" rows="3" style="width:100%; padding:8px; border-radius:8px; border:1px solid #ddd; margin-top:6px;" placeholder="ติดต่อมาจาก..."></textarea>
                       <div style="margin-top:8px; text-align:right;">
-                        <button id="btnSendMsg">ส่งข้อความ</button>
+                        <button id="bSend">ส่งข้อความ</button>
                       </div>
-                      <div id="msgStatus" style="margin-top:8px;"></div>
+                      <div id="sMsg" style="margin-top:8px;"></div>
                     </div>
                   `;
 
-                  if (mediaItems.length) {
-                    const m = mediaItems[0];
-                    html += `
+                  if (MM.length) {
+                    const m = MM[0];
+                    H0 += `
                       <div style="margin-top:14px; text-align:center;">
-                        <img id="mediaImg" alt="${m.title}" style="max-width:100%; border-radius:8px;"/>
+                        <img id="imgR" alt="${m.title}" style="max-width:100%; border-radius:8px;"/>
                         <div style="margin-top:8px;">
-                          <a id="btnDownloadResume" href="${m.downloadUrl}" target="_blank" rel="noopener" download>
+                          <a id="dlR" href="${m.downloadUrl}" target="_blank" rel="noopener" download>
                             ${'ดาวน์โหลด ' + m.title}
                           </a>
                         </div>
@@ -252,98 +221,79 @@
                     `;
                   }
 
+                  a2.innerHTML = H0;
 
-                  contactDiv.innerHTML = html;
-
-                  function setImageWithFallback(imgEl, sources) {
+                  function _imf(el, srcs) {
                     let i = 0;
-
-                    function tryNext() {
-                      if (i >= sources.length) return;
-                      imgEl.src = sources[i++];
-                    }
-                    imgEl.onerror = tryNext;
-                    tryNext();
+                    function _n() { if (i >= srcs.length) return; el.src = srcs[i++]; }
+                    el.onerror = _n; _n();
+                  }
+                  const _img = document.getElementById('imgR');
+                  if (_img && MM.length) {
+                    const m = MM[0];
+                    _imf(_img, [m.thumbnailUrl, m.lh3Url]);
                   }
 
-                  const imgEl = document.getElementById('mediaImg');
-                  if (imgEl && mediaItems.length) {
-                    const m = mediaItems[0];
-                    setImageWithFallback(imgEl, [m.thumbnailUrl, m.lh3Url]);
-                  }
-
-
-                  document.getElementById('btnFb').onclick = () => {
-                    if (fb) window.open(fb, '_blank', 'noopener');
-                  };
-                  document.getElementById('btnLine').onclick = () => {
-                    if (line) window.open(line, '_blank', 'noopener');
-                  };
-                  const btnSend = document.getElementById('btnSendMsg');
-                  if (btnSend) btnSend.onclick = async () => {
-                    const text = (document.getElementById('msgBox').value || '').trim();
-                    const msgStatus = document.getElementById('msgStatus');
-                    if (!text) {
-                      msgStatus.textContent = 'โปรดพิมพ์ข้อความก่อน';
-                      return;
-                    }
-                    msgStatus.textContent = 'กำลังส่ง...';
+                  document.getElementById('bFb').onclick = () => { if (fb) window.open(fb, '_blank', 'noopener'); };
+                  document.getElementById('bLn').onclick = () => { if (line) window.open(line, '_blank', 'noopener'); };
+                  const _bs = document.getElementById('bSend');
+                  if (_bs) _bs.onclick = async () => {
+                    const _tx = (document.getElementById('tMsg').value || '').trim();
+                    const _st = document.getElementById('sMsg');
+                    if (!_tx) { _st.textContent = 'โปรดพิมพ์ข้อความก่อน'; return; }
+                    _st.textContent = 'กำลังส่ง...';
                     try {
-                      const r = await jsonp(`${PROXY_BASE}/api/send-message`, { message: text, ip: ip, latitude: userLat.toFixed(6), longitude: userLon.toFixed(6) }, 'callback');
-
-                      msgStatus.textContent = (r && r.status === 'Success') ? '✅ ส่งข้อความเรียบร้อย' : '❌ ส่งไม่สำเร็จ';
+                      const _r = await j0(`${X0}/api/send-message`, { message: _tx, ip: ip, latitude: y0.toFixed(6), longitude: y1.toFixed(6) }, 'callback');
+                      _st.textContent = (_r && _r.status === 'Success') ? '✅ ส่งข้อความเรียบร้อย' : '❌ ส่งไม่สำเร็จ';
                     } catch (e) {
-                      msgStatus.textContent = '❌ ส่งไม่สำเร็จ';
+                      _st.textContent = '❌ ส่งไม่สำเร็จ';
                     }
                   };
 
                 } else {
-                  statusDiv.innerHTML =
-                    `คุณอยู่ห่างจากจุดมุ่งหมาย ${d} กิโลเมตร<br>ขอโทษที่ทำให้เสียเวลานะครับ 😔`;
+                  a0.innerHTML = `คุณอยู่ห่างจากจุดมุ่งหมาย ${d0} กิโลเมตร<br>ขอโทษที่ทำให้เสียเวลานะครับ 😔`;
                 }
 
-                showMap(userLat, userLon);
+                s0(y0, y1);
 
               } else {
-                statusDiv.className = 'error';
-                statusDiv.innerHTML = `❌ เกิดข้อผิดพลาด: ${result?.message || 'Unknown'}`;
+                a0.className = 'error';
+                a0.innerHTML = `❌ เกิดข้อผิดพลาด: ${R?.message || 'Unknown'}`;
               }
             })
-            .catch(err => {
-              statusDiv.className = 'error';
-              statusDiv.innerHTML = `❌ JSONP Error: ${err.message}`;
+            .catch(E => {
+              a0.className = 'error';
+              a0.innerHTML = `❌ JSONP Error: ${E.message}`;
             });
 
-        }, err => {
-          const msg = String(err && err.message || '');
-          if (/Only secure origins/i.test(msg)) {
-            handleInsecureContext(statusDiv);
+        }, er => {
+          const mg = String(er && er.message || '');
+          if (/Only secure origins/i.test(mg)) {
+            h0(a0);
           } else {
-            statusDiv.className = 'error';
-            statusDiv.textContent = `เกิดข้อผิดพลาด: ${msg}`;
+            a0.className = 'error';
+            a0.textContent = `เกิดข้อผิดพลาด: ${mg}`;
           }
         });
       }
 
-      function handleInsecureContext(statusDiv) {
-        statusDiv.className = 'error';
-        statusDiv.innerHTML = `เบราว์เซอร์บล็อกการระบุตำแหน่ง (ไม่ใช่ Secure Context).<br>
-        กรุณาเปิดลิงก์แบบ <b>https://</b> (เช่น <b>https://location.tomo-naja.org</b> หรือ <b>https://teeravist.github.io/location-checker/</b>)<br>
+      function h0(n0) {
+        n0.className = 'error';
+        n0.innerHTML = `เบราว์เซอร์บล็อกการระบุตำแหน่ง (ไม่ใช่ Secure Context).<br>
+        กรุณาเปิดลิงก์แบบ <b>https://</b> (เช่น <b>https://location.tomo-naja.org</b>)<br>
         หรือเปิดในเบราว์เซอร์หลักของเครื่อง แล้วลองใหม่อีกครั้ง`;
-        getPublicIp().then(ip => {
-          jsonp(`${PROXY_BASE}/api/log`, { ip: ip }, 'callback').catch(() => {});
-        });
+        i0().then(ip => { j0(`${X0}/api/log`, { ip: ip }, 'callback').catch(() => {}); });
       }
 
-      function showMap(userLat, userLon) {
-    const mapDiv = document.getElementById('map');
-    mapDiv.innerHTML = `
-      <iframe
-        width="100%" height="100%" frameborder="0" scrolling="no"
-        src="https://maps.google.com/maps?q=${userLat},${userLon}&hl=th&z=15&output=embed">
-      </iframe>
-    `;
-  }
+      function s0(LA, LO) {
+        const M = document.getElementById('map');
+        M.innerHTML = `
+          <iframe
+            width="100%" height="100%" frameborder="0" scrolling="no"
+            src="https://maps.google.com/maps?q=${LA},${LO}&hl=th&z=15&output=embed">
+          </iframe>
+        `;
+      }
     </script>
   </body>
 </html>
